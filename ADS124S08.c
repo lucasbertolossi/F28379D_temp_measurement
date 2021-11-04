@@ -288,7 +288,8 @@ uint16_t spi_xmit(Uint16 a)
     return rx;
 }
 
-uint16_t regWrite(uint16_t regnum, uint16_t data)
+//uint16_t regWrite(uint16_t regnum, uint16_t data)
+void regWrite(uint16_t regnum, uint16_t data)
 {
     uint16_t iDataTx[3];
     uint16_t iDataRx[3];
@@ -303,7 +304,7 @@ uint16_t regWrite(uint16_t regnum, uint16_t data)
 //        iDataRx[i] = SpiaRegs.SPIRXBUF;
         }
 //    setChipSelect();
-    return iDataRx[2];    // doesn't need to return, but im testing loopback
+//    return iDataRx[2];    // doesn't need to return, but im testing loopback
 }
 
 /*
@@ -367,7 +368,7 @@ void readRTDtemp(void){
     RTD_Type    rtdType = Pt;
     RTD_Example rtdExample = RTD_4_Wire_Fig16;
     float       rtdRes, rtdTemp;
-    ADCchar_Set adcChars, adcChars2;
+    ADCchar_Set adcChars;
     uint16_t     status;
 
 
@@ -521,12 +522,36 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     adcChars->pgaGain        = pow(2, (adcChars->pgaReg & ADS_GAIN_MASK) );
 
     // Write to all modified registers
-    writeMultipleRegisters( spiHdl, REG_ADDR_STATUS, REG_ADDR_SYS - REG_ADDR_STATUS + 1, initRegisterMap );
+//    writeMultipleRegisters( spiHdl, REG_ADDR_STATUS, REG_ADDR_SYS - REG_ADDR_STATUS + 1, initRegisterMap );
+    // Can improve this following part in the future
+//    regWrite(REG_ADDR_ID, );
+    regWrite(REG_ADDR_STATUS, 0x00);
+    regWrite(REG_ADDR_INPMUX, adcChars->inputMuxConfReg);
+    regWrite(REG_ADDR_PGA, adcChars->pgaReg);
+    regWrite(REG_ADDR_DATARATE, adcChars->dataRateReg);
+    regWrite(REG_ADDR_REF, adcChars->refSelReg);
+    regWrite(REG_ADDR_IDACMAG, adcChars->IDACmagReg);
+    regWrite(REG_ADDR_IDACMUX, adcChars->IDACmuxReg);
+    regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
+    regWrite(REG_ADDR_SYS, SYS_DEFAULT);
+
 
     // Read back all registers
-    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
+//    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
+    registerMap[REG_ADDR_STATUS] = regRead(REG_ADDR_STATUS);
+    registerMap[REG_ADDR_INPMUX] = regRead(REG_ADDR_INPMUX);
+    registerMap[REG_ADDR_PGA] = regRead(REG_ADDR_PGA);
+    registerMap[REG_ADDR_DATARATE] = regRead(REG_ADDR_DATARATE);
+    registerMap[REG_ADDR_REF] = regRead(REG_ADDR_REF);
+    registerMap[REG_ADDR_IDACMAG] = regRead(REG_ADDR_IDACMAG);
+    registerMap[REG_ADDR_IDACMUX] = regRead(REG_ADDR_IDACMUX);
+    registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
+    registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
+
+
+    // Check if all registers were written correctly
     for ( i = REG_ADDR_STATUS; i < REG_ADDR_SYS - REG_ADDR_STATUS + 1; i++ ) {
-        if ( i == REG_ADDR_STATUS )
+        if ( i == REG_ADDR_STATUS )         // ignores status register in case POR flag is set
             continue;
         if ( initRegisterMap[i] != registerMap[i] )
             return( false );

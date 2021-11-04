@@ -252,18 +252,6 @@ void SetupGpioADC(void){
 
 }
 
-/************************************************************************************//**
- *
- * @brief
- *
- *
- * @param[in]   -
- *
- * @return      None
- *
- */
-
-
 
 /************************************************************************************//**
  *
@@ -305,13 +293,14 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
     SetupDRDYGpio();        // Sets GPIO0 as falling edge external interruption
 
     // Start up the ADC
-    status = adcStartupRoutine( adcChars, *spiHdl );
+    status = adcStartupRoutine(adcChars);
 
     /* DRDY interrupt configuration */
 //    GPIO_clearInt( ADC_DRDY );
 //    GPIO_enableInt( ADC_DRDY );                           // enable Interrupt
 
-    startConversions( *spiHdl );                           // Start Conversions
+    // *********** continue here
+//    startConversions();                           // Start Conversions
 
     return( status );
 }
@@ -334,3 +323,44 @@ void toggleRESET( void )
     GpioDataRegs.GPASET.bit.GPIO1 = 1;
 }
 
+
+/************************************************************************************//**
+ *
+ * @brief startConversions()
+ *          Wakes the device from power-down and starts continuous conversions
+ *            by setting START pin high or sending START Command
+ *
+ * @param[in]
+ *
+ * @return      None
+ */
+void startConversions()
+{
+    // Wakeup device
+    sendWakeup();
+
+#ifdef START_PIN_CONTROLLED
+     /* Begin continuous conversions */
+    setSTART( HIGH );
+#else
+    sendSTART( spiHdl );
+#endif
+}
+
+
+/************************************************************************************//**
+ *
+ * @brief sendWakeup()
+ *            Sends Wakeup Command through SPI
+ *
+ * @param[in]
+ *
+ * @return      None
+ */
+void sendWakeup()
+{
+    uint16_t dataTx = OPCODE_WAKEUP;
+
+    // Wakeup device
+    sendCommand(dataTx);
+}

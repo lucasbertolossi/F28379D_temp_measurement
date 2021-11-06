@@ -37,7 +37,7 @@
 //****************************************************************************
 
 // Flag to indicate if an interrupt occured
-extern volatile bool flag_nDRDY_INTERRUPT;
+//extern volatile bool flag_nDRDY_INTERRUPT;
 
 /************************************************************************************//**
  *
@@ -46,11 +46,11 @@ extern volatile bool flag_nDRDY_INTERRUPT;
  *
  * @return None
  */
-void ADC_DRDY_CallbackFxn( uint_least8_t index )
-{
-    /* Set nDRDY flag to true */
-    flag_nDRDY_INTERRUPT = true;
-}
+//void ADC_DRDY_CallbackFxn( uint_least8_t index )
+//{
+//    /* Set nDRDY flag to true */
+//    flag_nDRDY_INTERRUPT = true;
+//}
 
 
 
@@ -203,8 +203,10 @@ void InitSpiGpioADC(void)
 /************************************************************************************//**
  *
  * @brief SetupGpioADC()
- *          Configure GPIO0 as a falling edge triggered interrupt for DRDY signal.
+ *          1. Configure GPIO0 as a falling edge triggered interrupt for DRDY signal.
  *          This signal indicates availability of new conversion data.
+ *          2. Configure GPIO for ADC /RESET pin, set it high
+ *          3. Configure GPIO for ADC START pin, set it low
  *
  * @param[in]   -
  *
@@ -253,6 +255,24 @@ void SetupGpioADC(void){
 }
 
 
+//
+// spi_xmit - Transmit 8 bits (LEFT-JUSTIFIED). Example: send (08h) -> spi_send(0x0800)
+// Data written to SPIDAT or SPITXBUF initiates data transmission on the SPISIMO pin,
+// MSB (most significant bit) first.
+//
+// spi_xmit - Transmit value via SPI
+//
+uint16_t spi_xmit(uint16_t a)
+{
+    uint16_t rx;
+    SpiaRegs.SPITXBUF = a << 8;
+    while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // maybe needs to change to interrupt depending on adc returning value or not
+    rx = SpiaRegs.SPIRXBUF;
+    return rx;
+}
+
+
+
 /************************************************************************************//**
  *
  *
@@ -299,11 +319,11 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
 //    GPIO_clearInt( ADC_DRDY );
 //    GPIO_enableInt( ADC_DRDY );                           // enable Interrupt
 
-    // *********** continue here
-//    startConversions();                           // Start Conversions
+    startConversions();                           // Start Conversions
 
     return( status );
 }
+
 
 /************************************************************************************//**
  *
@@ -326,41 +346,53 @@ void toggleRESET( void )
 
 /************************************************************************************//**
  *
- * @brief startConversions()
- *          Wakes the device from power-down and starts continuous conversions
- *            by setting START pin high or sending START Command
+ * @brief sendWakeup()
+ *            Sends Wake up Command through SPI
  *
  * @param[in]
  *
  * @return      None
  */
-void startConversions()
+void sendWakeup(void)
 {
-    // Wakeup device
-    sendWakeup();
+    uint16_t dataTx = OPCODE_WAKEUP;
 
-#ifdef START_PIN_CONTROLLED
-     /* Begin continuous conversions */
-    setSTART( HIGH );
-#else
-    sendSTART( spiHdl );
-#endif
+    // Wakeup device
+    spi_xmit(dataTx);
 }
 
 
 /************************************************************************************//**
  *
- * @brief sendWakeup()
- *            Sends Wakeup Command through SPI
+ * @brief setSTART()
+ *            Sets the state of the MCU START GPIO pin
+ *
+ * @param[in]   state   level of START pin (false = low, true = high)
+ *
+ * @return      None
+ */
+void setSTART( bool state )
+{
+    GpioDataRegs.GPASET.bit.GPIO2 = 1;
+
+    // Minimum START width: 4 tCLKs
+    DELAY_US( DELAY_4TCLK );
+}
+
+
+/************************************************************************************//**
+ *
+ * @brief sendSTOP()
+ *            Sends STOP Command through SPI
  *
  * @param[in]
  *
  * @return      None
  */
-void sendWakeup()
+void sendSTOP(void)
 {
-    uint16_t dataTx = OPCODE_WAKEUP;
+    uint16_t dataTx = OPCODE_STOP;
 
-    // Wakeup device
-    sendCommand(dataTx);
+    // Send STOP Command
+    spi_xmit(dataTx);
 }

@@ -60,6 +60,7 @@
 #include "F28x_Project.h"
 #include <math.h>
 #include "ADS124S08.h"
+#include "adchal_tidrivers_adapted.h"
 /* RTD related includes */
 #include "inc/rtd.h"
 #include "inc/rtd_tables.h"
@@ -87,163 +88,7 @@ static uint16_t registerMap[NUM_REGISTERS];
 //
 //****************************************************************************
 
-// InitSPIADS124S08 - This function initializes the SPI to a known state to work with ADS124S08EVM
-//
-void InitSpiADS124S08(void)
-{
-    // Step 1. Clear the SPI Software Reset bit (SPISWRESET) to 0 to force the SPI to the reset state.
-    SpiaRegs.SPICCR.bit.SPISWRESET = 0;
-
-    // Step 2. Configure the SPI as desired:
-    // • Select either master or slave mode (MASTER_SLAVE).
-    //   Enable master (0 == slave, 1 == master)
-    SpiaRegs.SPICTL.bit.MASTER_SLAVE = 1;
-
-    // • Choose SPICLK polarity and phase (CLKPOLARITY and CLK_PHASE). SPI mode 1 selected.
-    //   Clock polarity (0 == rising, 1 == falling), ADS124S08 operates in SPI mode 1 (CPOL = 0, CPHA = 1)
-    SpiaRegs.SPICCR.bit.CLKPOLARITY = 0;
-    //   Clock phase (0 == normal, 1 == delayed)
-    SpiaRegs.SPICTL.bit.CLK_PHASE = 1;
-
-    // • Set the desired baud rate (SPIBRR).
-    //   ADS124S08 - Minimum period for SCLK = 100 ns (maximum frequency is 10 MHz)
-    //   Baud rate for HS_MODE = 0 is LSPCLK/(SPIBRR+1) (example 18-3)
-    //   Default SYSCLK = 200 MHz
-    //   LSPCLKDIV is set to default /4 table 3-164 page 345 (LOSPCP register field)
-    //   LSPCLK = 200 / 4 = 50 MHz, SPIBRR = 49 was chosen -> baud rate = 1 MHz
-    SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR_ADS124S08;
-
-    // • Enable high speed mode if desired (HS_MODE).  (Not needed)
-    // • Set the SPI character length (SPICHAR) to 8.
-    SpiaRegs.SPICCR.bit.SPICHAR = (SPI_WORD_SIZE-1);
-
-    // • Clear the SPI Flags (OVERRUN_FLAG, INT_FLAG). Cleared setting SPISWRESET to 0
-//    SpiaRegs.SPISTS.bit.OVERRUN_FLAG = 1;
-
-    // • Enable SPISTE inversion (STEINV) if needed. (Not needed)
-    // • Enable 3-wire mode (TRIWIRE) if needed. (Not needed)
-
-    // • If using FIFO enhancements:
-    // – Enable the FIFO enhancements (SPIFFENA). > SPIFFTX.14 = 1
-    // – Clear the FIFO Flags (TXFFINTCLR, RXFFOVFCLR, and RXFFINTCLR).
-    //   SPIFFTX.6 = 1 / SPIFFRX.14 = 1 / SPIFFRX.6 = 1
-    // – Release transmit and receive FIFO resets (TXFIFO and RXFIFORESET).
-    //   SPIFFTX.13 = 1 / SPIFFRX.13 = 1
-    // – Release SPI FIFO channels from reset (SPIRST).
-    //   SPIFFTX.15 = 1
-    // Step 3. If interrupts are used:
-    // • In non-FIFO mode, enable the receiver overrun and/or SPI interrupts (OVERRUNINTENA
-    // and SPIINTENA).
-    // • In FIFO mode, set the transmit and receive interrupt levels (TXFFIL and RXFFIL) then
-    // enable the interrupts (TXFFIENA and RXFFIENA). (bits 4-0)
-    // SPI interrupts are disabled (SPICTL.SPIINTENA) by default // FIFO interrupts are disabled
-    SpiaRegs.SPIFFTX.all = 0xE040;
-    SpiaRegs.SPIFFRX.all = 0x2040;
-
-    // Enable transmission (Talk)
-    SpiaRegs.SPICTL.bit.TALK = 1;
-
-    // Step 4. Set SPISWRESET to 1 to release the SPI from the reset state.
-    SpiaRegs.SPICCR.bit.SPISWRESET = 1;
-
-    // Set FREE bit
-    // Halting on a breakpoint will not halt the SPI (debugging purposes)
-    SpiaRegs.SPIPRI.bit.FREE = 1;
-
-    // Release the SPI from reset
-    SpiaRegs.SPICCR.bit.SPISWRESET = 1;
-}
-
-
-//
-// Initialize SPIA GPIOs
-// GPIO16 - GPIO19 as SPISIMOA, SPISOMIA, SPICLKA, SPISTEA.
-// Pullup enabled and QSEL async.
-// SPISTEA stands for Chip Select. See connections in header file.
-//
-void InitSpiGpioADC(void)
-{
-    EALLOW;
-    //
-    // Enable internal pull-up for the selected pins
-    //
-    // Pull-ups can be enabled or disabled by the user.
-    // This will enable the pullups for the specified pins.
-    //
-    GpioCtrlRegs.GPBPUD.bit.GPIO58 = 0;  // Enable pull-up on GPIO58 (SPISIMOA)
-    GpioCtrlRegs.GPBPUD.bit.GPIO59 = 0;  // Enable pull-up on GPIO59 (SPISOMIA)
-    GpioCtrlRegs.GPBPUD.bit.GPIO60 = 0;  // Enable pull-up on GPIO60 (SPICLKA)
-    GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;  // Enable pull-up on GPIO61 (SPISTEA)
-
-    //
-    // Set qualification for selected pins to asynch only
-    //
-    // This will select asynch (no qualification) for the selected pins.
-    //
-    GpioCtrlRegs.GPBQSEL2.bit.GPIO58 = 3; // Asynch input GPIO58 (SPISIMOA)
-    GpioCtrlRegs.GPBQSEL2.bit.GPIO59 = 3; // Asynch input GPIO59 (SPISOMIA)
-    GpioCtrlRegs.GPBQSEL2.bit.GPIO60 = 3; // Asynch input GPIO60 (SPICLKA)
-    GpioCtrlRegs.GPBQSEL2.bit.GPIO61 = 3; // Asynch input GPIO61 (SPISTEA)
-
-    //
-    // Configure SPI-A pins using GPIO registers
-    //
-    // Write the appropriate values to GPyMUX1/2 and GPyGMUX1/2.
-    // These were defined using table 8-7 pages 959-963 on technical reference manual
-    // "When changing the GPyGMUX value for a pin, always set the corresponding GPyMUX
-    // to zero first to avoid glitching in the muxes." (page 953)
-    //
-    GpioCtrlRegs.GPBMUX2.bit.GPIO58 = 0;
-    GpioCtrlRegs.GPBMUX2.bit.GPIO59 = 0;
-    GpioCtrlRegs.GPBMUX2.bit.GPIO60 = 0;
-    GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 0;
-
-    GpioCtrlRegs.GPBGMUX2.bit.GPIO58 = 3;
-    GpioCtrlRegs.GPBGMUX2.bit.GPIO59 = 3;
-    GpioCtrlRegs.GPBGMUX2.bit.GPIO60 = 3;
-    GpioCtrlRegs.GPBGMUX2.bit.GPIO61 = 3;
-
-    GpioCtrlRegs.GPBMUX2.bit.GPIO58 = 3;
-    GpioCtrlRegs.GPBMUX2.bit.GPIO59 = 3;
-    GpioCtrlRegs.GPBMUX2.bit.GPIO60 = 3;
-    GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 3;
-
-    EDIS;
-}
-
-
-//
-// Configure GPIO0 as a falling edge triggered interrupt for DRDY signal.
-// This signal indicates availability of new conversion data.
-//
-void SetupDRDYGpio(void){
-    EALLOW;
-    GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 0;         // GPIO
-    GpioCtrlRegs.GPADIR.bit.GPIO0 = 0;          // input
-    GpioCtrlRegs.GPAQSEL1.bit.GPIO0 = 0;        // XINT1 Synch to SYSCLKOUT only
-    EDIS;
-
-    //
-    // GPIO0 is XINT1
-    //
-    GPIO_SetupXINT1Gpio(0);
-
-    //
-    // Configure XINT1
-    //
-    XintRegs.XINT1CR.bit.POLARITY = 0;          // Falling edge interrupt
-    XintRegs.XINT2CR.bit.POLARITY = 1;          // Rising edge interrupt
-
-    //
-    // Enable XINT1 and XINT2
-    //
-    XintRegs.XINT1CR.bit.ENABLE = 1;            // Enable XINT1
-
-}
-
-
-
-////
+//// Commented because I am trying to use SPISTEA and not GPIO /CS
 //// clearShipSelect - Sets CS Pin to low and delay for a minimum of td(CSSC)
 ////
 //void clearChipSelect(void){
@@ -258,35 +103,14 @@ void SetupDRDYGpio(void){
 //    GpioDataRegs.GPBSET.bit.GPIO61 = 1;
 //}
 
-//
-// spi_xmit - Transmit 8 bits (LEFT-JUSTIFIED). Example: send (08h) -> spi_send(0x0800)
-// Data written to SPIDAT or SPITXBUF initiates data transmission on the SPISIMO pin,
-// MSB (most significant bit) first.
-void spi_send(uint16_t data)
-{
-//    data = data << 8;
-    SpiaRegs.SPITXBUF = data;
-}
 
-/*
- * Writes a single of register with the specified data
- *
- * \param regnum addr_mask 8-bit mask of the register to which we start writing
- * \param data to be written
- *
- */
+//void spi_send(uint16_t data)
+//{
+////    data = data << 8;
+//    SpiaRegs.SPITXBUF = data;
+//}
 
-//
-// spi_xmit - Transmit value via SPI
-//
-uint16_t spi_xmit(Uint16 a)
-{
-    uint16_t rx;
-    SpiaRegs.SPITXBUF = a;
-    while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // mayybe needs to change to interrupt depending on adc returning value or not
-    rx = SpiaRegs.SPIRXBUF;
-    return rx;
-}
+
 
 //uint16_t regWrite(uint16_t regnum, uint16_t data)
 void regWrite(uint16_t regnum, uint16_t data)
@@ -294,9 +118,11 @@ void regWrite(uint16_t regnum, uint16_t data)
     uint16_t iDataTx[3];
     uint16_t iDataRx[3];
     int i;
-    iDataTx[0] = (OPCODE_WREG + (regnum & 0x1f)) << 8;
+//    iDataTx[0] = (OPCODE_WREG + (regnum & 0x1f)) << 8;
+    iDataTx[0] = OPCODE_WREG + (regnum & 0x1f);
     iDataTx[1] = 0x0000;
-    iDataTx[2] = data << 8;
+//    iDataTx[2] = data << 8;
+    iDataTx[2] = data;
 //    clearChipSelect();
     for (i = 0; i < 3; i++){
         iDataRx[i] = spi_xmit(iDataTx[i]);
@@ -306,6 +132,8 @@ void regWrite(uint16_t regnum, uint16_t data)
 //    setChipSelect();
 //    return iDataRx[2];    // doesn't need to return, but im testing loopback
 }
+
+
 
 /*
  * Reads a single register contents from the specified address
@@ -574,7 +402,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
   *
   * @return      None
   */
-void restoreRegisterDefaults( void )
+void restoreRegisterDefaults(void)
 {
      /* Default register settings */
      registerMap[REG_ADDR_ID]       = ID_DEFAULT;
@@ -595,5 +423,49 @@ void restoreRegisterDefaults( void )
      registerMap[REG_ADDR_FSCAL2]   = FSCAL2_DEFAULT;
      registerMap[REG_ADDR_GPIODAT]  = GPIODAT_DEFAULT;
      registerMap[REG_ADDR_GPIOCON]  = GPIOCON_DEFAULT;
+}
+
+
+/************************************************************************************//**
+ *
+ * @brief startConversions()
+ *          Wakes the device from power-down and starts continuous conversions
+ *            by setting START pin high or sending START Command
+ *
+ * @param[in]
+ *
+ * @return      None
+ */
+void startConversions(void)
+{
+    // Wakeup device
+    sendWakeup();
+
+#ifdef START_PIN_CONTROLLED
+     /* Begin continuous conversions */
+    setSTART( HIGH );
+#else
+    sendSTART( spiHdl );
+#endif
+}
+
+
+/************************************************************************************//**
+ *
+ * @brief stopConversions()
+ *          Stops continuous conversions by setting START pin low or sending STOP Command
+ *
+ * @param[in]
+ *
+ * @return      None
+ */
+void stopConversions()
+{
+     /* Stop continuous conversions */
+#ifdef START_PIN_CONTROLLED
+    setSTART( LOW );
+#else
+    sendSTOP();
+#endif
 }
 

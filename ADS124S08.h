@@ -651,31 +651,36 @@ extern bool converting;
 //*****************************************************************************
 
 //    Function prototypes
+
+    void regWrite(uint16_t regnum, uint16_t data);
+    uint16_t regRead(uint16_t regnum);
+    void readRTDtemp(void);
+    bool adcStartupRoutine(ADCchar_Set *adcChars);
+    void restoreRegisterDefaults(void);
+    void startConversions(void);
+    void stopConversions(void);
+
 //    ADS124S08 Datasheet code sequence example
 //
-
 //    Power-up so that all supplies reach minimum operating levels;
 //    Delay for a minimum of 2.2 ms to allow power supplies to settle and power-up reset to complete;
 //    DELAY_US(2200);
 
 //    Configure the SPI interface of the microcontroller to SPI mode 1 (CPOL = 0, CPHA =1);
-void InitSpiADS124S08(void);
 
 //    If the CS pin is not tied low permanently, configure the microcontroller GPIO connected to CS as an
 //    output;
-void InitSpiGpioADC(void);
 
 //    Configure the microcontroller GPIO connected to the DRDY pin as a falling edge triggered interrupt
 //    input;
-void SetupDRDYGpio(void);
 
 //
 //    Set CS to the device low;
 //    Delay for a minimum of td(CSSC);
-void clearChipSelect(void);
+//void clearChipSelect(void);
 
 //    Send the RESET command (06h) to make sure the device is properly reset after power-up; //Optional
-void spi_send(Uint16 data);
+//void spi_send(Uint16 data);
 
 //    Delay for a minimum of 4096 · tCLK; tCLK = 1/fCLK
 //    DELAY_US(DELAY_RESET);
@@ -695,7 +700,7 @@ void spi_send(Uint16 data);
 //    F0; // IDAC1 set to AIN0, IDAC2 disabled
 
 //    Set CS high;
-void setChipSelect(void);
+//void setChipSelect(void);
 
 //    For verification, read back all configuration registers with the RREG command;
 //

@@ -177,7 +177,8 @@ interrupt void xint1_isr(void)
 {
     xINT1Count++; // Watch variable - checking if /DRDY is going low after each conversion
 
-
+    /* Set nDRDY flag to true */
+    flag_nDRDY_INTERRUPT = true;
 
 
 

@@ -91,4 +91,10 @@
 			<locationURI>PARENT-4-PROJECT_LOC/ti/c2000/C2000Ware_3_04_00_00/device_support/f2837xd/common/source/F2837xD_usDelay.asm</locationURI>
 		</link>
 	</linkedResources>
+	<variableList>
+		<variable>
+			<name>copy_PARENT</name>
+			<value>$%7BTI_PRODUCTS_DIR%7D/ADCTempSensorFW_1.1.0/Software</value>
+		</variable>
+	</variableList>
 </projectDescription>

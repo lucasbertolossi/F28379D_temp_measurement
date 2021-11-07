@@ -48,7 +48,7 @@
 #define ADCHAL_TIDRIVERS_ADAPTED_H_
 
 #include <stdint.h>
-//#include <stdbool.h>
+#include <stdbool.h>
 
 //*****************************************************************************
 //
@@ -66,10 +66,19 @@ void toggleRESET( void );
 void sendWakeup(void);
 void setSTART( bool state );
 void sendSTOP(void);
+bool waitForDRDYHtoL( uint32_t timeout_ms );
 
 
+//*****************************************************************************
+//
+// Macros
+//
+//*****************************************************************************
+/** Alias used for setting GPIOs pins to the logic "high" state */
+#define HIGH                ((bool) true)
 
-
+/** Alias used for setting GPIOs pins to the logic "low" state */
+#define LOW                 ((bool) false)
 
 
 #endif /* ADCHAL_TIDRIVERS_ADAPTED_H_ */

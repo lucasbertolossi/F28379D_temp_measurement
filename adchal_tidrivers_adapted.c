@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include "F28x_Project.h"
+#include "ADS124S08.h"
 
 
 //****************************************************************************
@@ -37,7 +38,7 @@
 //****************************************************************************
 
 // Flag to indicate if an interrupt occured
-//extern volatile bool flag_nDRDY_INTERRUPT;
+extern volatile bool flag_nDRDY_INTERRUPT;
 
 /************************************************************************************//**
  *
@@ -306,18 +307,19 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
 //        Display_printf( displayHdl, 0, 0, "Master SPI initialized\n" );
 //    }
 
-    InitSpiADS124S08();     // Configure SPI interface (CPOL = 0, CPHA =1);
+    InitSpiADS124S08();     // Configures SPI interface (CPOL = 0, CPHA =1);
 
-    InitSpiGpioADC();       // Initializes GPIO58 - GPIO61 as SPISIMOA, SPISOMIA, SPICLKA, SPISTEA.
+    InitSpiGpioADC();       // Configures GPIO58 - GPIO61 as SPISIMOA, SPISOMIA, SPICLKA, SPISTEA.
 
-    SetupDRDYGpio();        // Sets GPIO0 as falling edge external interruption
+    SetupGpioADC();         // Configures GPIO for pins START and /RESET
+                            // Configure external interruption for DRDY
 
     // Start up the ADC
     status = adcStartupRoutine(adcChars);
 
     /* DRDY interrupt configuration */
 //    GPIO_clearInt( ADC_DRDY );
-//    GPIO_enableInt( ADC_DRDY );                           // enable Interrupt
+//    GPIO_enableInt( ADC_DRDY );                 // enable Interrupt
 
     startConversions();                           // Start Conversions
 
@@ -373,8 +375,11 @@ void sendWakeup(void)
  */
 void setSTART( bool state )
 {
+    if(state){
     GpioDataRegs.GPASET.bit.GPIO2 = 1;
-
+    } else {
+    GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
+    }
     // Minimum START width: 4 tCLKs
     DELAY_US( DELAY_4TCLK );
 }
@@ -395,4 +400,43 @@ void sendSTOP(void)
 
     // Send STOP Command
     spi_xmit(dataTx);
+}
+
+
+/************************************************************************************//**
+ *
+ * @brief waitForDRDYHtoL()
+ *            Waits for a nDRDY GPIO to go from High to Low or until a timeout condition occurs
+ *            The DRDY output line is used as a status signal to indicate
+ *            when a conversion has been completed. DRDY goes low
+ *            when new data is available.
+ *
+ * @param[in]   timeout_ms number of milliseconds to allow until a timeout
+ *
+ * @return      Returns true if nDRDY interrupt occurred before the timeout
+ *
+ * @code
+ *      // Read next conversion result
+ *      if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
+ *          RTDadcChars.adcValue1 = readConvertedData( spiHdl, &status, COMMAND );
+ *      } else {
+ *          // Error reading conversion result
+ *          Display_printf( displayHdl, 0, 0, "Timeout on conversion\n" );
+ *          return( false );
+ *      }
+ * @endcode
+ */
+bool waitForDRDYHtoL( uint32_t timeout_ms )
+{
+    uint32_t timeoutCounter = timeout_ms * 6000;   // convert to # of loop iterations;
+
+    do {
+    } while ( !(flag_nDRDY_INTERRUPT) && (--timeoutCounter) );
+
+    if ( !timeoutCounter ) {
+        return false;
+    } else {
+        flag_nDRDY_INTERRUPT = false; // Reset flag
+        return true;
+    }
 }

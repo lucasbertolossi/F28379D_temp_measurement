@@ -88,6 +88,22 @@ static uint16_t registerMap[NUM_REGISTERS];
 //
 //****************************************************************************
 
+/************************************************************************************//**
+ *
+ * @brief getRegisterValue()
+ *          Getter function to access the registerMap array outside of this module
+ *
+ * @param[in]   address The 8-bit register address
+ *
+ * @return      The 8-bit register value
+ */
+uint16_t getRegisterValue( uint16_t address )
+{
+    assert( address < NUM_REGISTERS );
+    return registerMap[address];
+}
+
+
 //// Commented because I am trying to use SPISTEA and not GPIO /CS
 //// clearShipSelect - Sets CS Pin to low and delay for a minimum of td(CSSC)
 ////
@@ -117,7 +133,7 @@ void regWrite(uint16_t regnum, uint16_t data)
 {
     uint16_t iDataTx[3];
     uint16_t iDataRx[3];
-    int i;
+    uint16_t i;
 //    iDataTx[0] = (OPCODE_WREG + (regnum & 0x1f)) << 8;
     iDataTx[0] = OPCODE_WREG + (regnum & 0x1f);
     iDataTx[1] = 0x0000;
@@ -143,10 +159,10 @@ void regWrite(uint16_t regnum, uint16_t data)
  */
 uint16_t regRead(uint16_t regnum)
 {
-    int i;
     uint16_t iDataTx[3];
     uint16_t iDataRx[3];
-//    uint16_t junk;
+    uint16_t i;
+    //    uint16_t junk;
     iDataTx[0] = (OPCODE_RREG + (regnum & 0x1f)) << 8;
     iDataTx[1] = 0x00;
     iDataTx[2] = 0x00;    // just clock data into RX buffer
@@ -245,14 +261,18 @@ void readRTDtemp(void){
     adcChars.VBIASReg = RTD_VBIAS;
 
     /* add in device initialization */
+    //        Display_printf( displayHdl, 0, 0, "Error initializing master SPI\n" );
+    // previous argument of function below ^
+    //        DisplayLCD(1, "Error init.")
+    //        DisplayLCD(2, "master SPI");
     if ( !InitADCPeripherals(&adcChars) ) {
-//        Display_printf( displayHdl, 0, 0, "Error initializing master SPI\n" );
+
         while (1);
     }
 
     do {
         if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
-            adcChars.adcValue1 = readConvertedData( spiHdl, &status, COMMAND );
+            adcChars.adcValue1 = readConvertedData( &status, COMMAND );
             // For 3-wire with one IDAC, multiple readings are needed. So reconfigure ADC to read 2nd channel
 //            if ( rtdSet->wiring == Three_Wire_High_Side_Ref_One_IDAC || rtdSet->wiring == Three_Wire_Low_Side_Ref_One_IDAC ) {
 //                adcChars2.inputMuxConfReg = RTD_THREE_WIRE_INPUT_MUX2;
@@ -320,7 +340,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     // Toggle nRESET pin to assure default register settings.
     toggleRESET();
     // Must wait 4096 tCLK after reset
-    usleep( DELAY_4096TCLK );
+    DELAY_US( DELAY_4096TCLK );
 
     status = regRead(REG_ADDR_STATUS);
     if ( (status & ADS_nRDY_MASK) ) {
@@ -463,9 +483,87 @@ void stopConversions()
 {
      /* Stop continuous conversions */
 #ifdef START_PIN_CONTROLLED
-    setSTART( LOW );
+    setSTART(LOW);
 #else
     sendSTOP();
 #endif
 }
+
+
+/************************************************************************************//**
+ *
+ * @brief readData()
+ *          Sends the read command and retrieves STATUS (if enabled) and data
+ *          NOTE: Call this function after /DRDY goes low and specify the
+ *          the number of bytes to read and the starting position of data
+ *
+ * @param[in]   status[]    Pointer to location where STATUS byte will be stored
+ * @param[in]   mode        Direct or Command read mode
+ *
+ * @return      32-bit sign-extended conversion result (data only)
+ */
+int32_t readConvertedData(uint16_t status[], readMode mode )
+{
+    uint16_t DataTx[RDATA_COMMAND_LENGTH + STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH] = { 0 };    // Initialize all array elements to 0
+    uint16_t DataRx[RDATA_COMMAND_LENGTH + STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH] = { 0 };
+    uint16_t byteLength;
+    uint16_t dataPosition;
+    uint16_t byte_options;
+    bool    status_byte_enabled = 0;
+    int32_t signByte, upperByte, middleByte, lowerByte;
+    uint16_t i;
+    // Status Byte is sent if SENDSTAT bit of SYS register is set
+    byte_options = IS_SENDSTAT_SET << 1 | IS_CRC_SET;
+    switch ( byte_options ) {
+        case 0:                         // No STATUS and no CRC
+            byteLength   = DATA_LENGTH;
+            dataPosition = 0;
+            break;
+        case 1:                         // No STATUS and CRC
+            byteLength   = DATA_LENGTH + CRC_LENGTH;
+            dataPosition = 0;
+            break;
+        case 2:                         // STATUS and no CRC
+            byteLength   = STATUS_LENGTH + DATA_LENGTH;
+            dataPosition = 1;
+            status_byte_enabled = 1;
+            break;
+        case 3:                         // STATUS and CRC
+            byteLength   = STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH;
+            dataPosition = 1;
+            status_byte_enabled = 1;
+            break;
+    }
+
+    if ( mode == COMMAND ) {
+        DataTx[0]     = OPCODE_RDATA;
+        byteLength   += 1;
+        dataPosition += 1;
+    }
+//    spiSendReceiveArrays( spiHdl, DataTx, DataRx, byteLength );
+    for(i = 0; i < byteLength; i++){
+        DataRx[i] = spi_xmit(DataTx[i]);
+    }
+
+
+    // Parse returned SPI data
+    /* Check if STATUS byte is enabled and if we have a valid "status" memory pointer */
+    if ( status_byte_enabled && status ) {
+        status[0] = DataRx[dataPosition - 1];
+    }
+
+    /* Return the 32-bit sign-extended conversion result */
+    if ( DataRx[dataPosition] & 0x80u ) {
+        signByte = 0xFF000000;
+    } else {
+        signByte = 0x00000000;
+    }
+
+    upperByte   = ((int32_t) DataRx[dataPosition] & 0xFF) << 16;
+    middleByte  = ((int32_t) DataRx[dataPosition + 1] & 0xFF) << 8;
+    lowerByte   = ((int32_t) DataRx[dataPosition + 2] & 0xFF);
+
+    return ( signByte + upperByte + middleByte + lowerByte );
+}
+
 

@@ -651,7 +651,7 @@ extern bool converting;
 //*****************************************************************************
 
 //    Function prototypes
-
+    uint16_t getRegisterValue( uint16_t address );
     void regWrite(uint16_t regnum, uint16_t data);
     uint16_t regRead(uint16_t regnum);
     void readRTDtemp(void);
@@ -659,6 +659,7 @@ extern bool converting;
     void restoreRegisterDefaults(void);
     void startConversions(void);
     void stopConversions(void);
+    int32_t readConvertedData(uint16_t status[], readMode mode );
 
 //    ADS124S08 Datasheet code sequence example
 //

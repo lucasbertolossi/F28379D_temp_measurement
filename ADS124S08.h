@@ -749,4 +749,4 @@ extern bool converting;
  */
 #define IS_SENDSTAT_SET     ((bool) (getRegisterValue(REG_ADDR_SYS) & ADS_SENDSTATUS_MASK))
 #define IS_CRC_SET          ((bool) (getRegisterValue(REG_ADDR_SYS) & ADS_CRC_MASK))
-#endif // ADS124S08_H_
+#endif /* ADS124S08_H_ */

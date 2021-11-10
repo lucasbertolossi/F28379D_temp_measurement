@@ -49,21 +49,27 @@
 // Included Files
 //
 #include <stdint.h>
+#include <stdbool.h>
 #include "F28x_Project.h"
-#include "Peripheral_Setup.h"
 #include "F28379D_lcd.h"
 #include "ADS124S08.h"
+#include "adchal_tidrivers_adapted.h"
 //#include "pin_map.h"
 //#include "device.h"
 
+//****************************************************************************
 //
-// Globals
+// Global
 //
-volatile uint32_t xINT1Count;
+//****************************************************************************
+
+//volatile uint32_t xINT1Count;
 volatile uint16_t dataw;
 // Debug messages to display in LCD
 char message[] = "LAUNCHXL";
 char message2[] = "F28379D";
+
+bool flag_nDRDY_INTERRUPT = false;
 
 //
 // Function Prototypes
@@ -75,7 +81,7 @@ interrupt void xint1_isr(void);
 //
 int main(void)
 {
-    Uint32 xINT1Count;
+//    Uint32 xINT1Count;
 
 //
 // Initialize System Control:
@@ -125,7 +131,7 @@ int main(void)
 //
 // Clear the counter
 //
-    xINT1Count = 0;                             // Count XINT1 interrupts
+//    xINT1Count = 0;                             // Count XINT1 interrupts
 
 //
 // Enable XINT1 in the PIE: Group 1 interrupt 4
@@ -175,7 +181,7 @@ int main(void)
 // External interrupt XINT1 indicates availability of new conversion data.
 interrupt void xint1_isr(void)
 {
-    xINT1Count++; // Watch variable - checking if /DRDY is going low after each conversion
+//    xINT1Count++; // Watch variable - checking if /DRDY is going low after each conversion
 
     /* Set nDRDY flag to true */
     flag_nDRDY_INTERRUPT = true;

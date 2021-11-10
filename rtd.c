@@ -138,9 +138,9 @@ float RTD_Linearization( RTD_Set *rtdSet, float RTDres )
 
 #ifdef POLYNOMIAL  // Polynomial expansion
 
-    // Callendar–Van Dusen equation
+    // Callendar-Van Dusen equation
 
-    // for T > 0°C: Rrtd(T) = R0 * [1 + (A * T) + (B * T^2)]
+    // for T > 0 �C: Rrtd(T) = R0 * [1 + (A * T) + (B * T^2)]
     //   solves to T = -A + Sqrt( A^2 - 4B(1 - Rrtd/R100))/ 2B )
     RTDtemp = (-rtdSet->a + sqrt( rtdSet->a * rtdSet->a - 4 * rtdSet->b * (1 - RTDres/rtdSet->R0)) ) / (2 * rtdSet->b);
     if ( RTDtemp >= 0 )

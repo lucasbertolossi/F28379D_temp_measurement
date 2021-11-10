@@ -49,25 +49,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "ADS124S08.h"
 
-//*****************************************************************************
-//
-// Function Prototypes
-//
-//*****************************************************************************
-
-void InitSpiADS124S08(void);
-void InitSpiGpioADC(void);
-void SetupGpioADC(void);
-uint16_t spi_xmit(uint16_t a);
-//unsigned int spi_xmit(uin16_t a)
-bool InitADCPeripherals( ADCchar_Set *adcChars);
-void toggleRESET( void );
-void sendWakeup(void);
-void setSTART( bool state );
-void sendSTOP(void);
-bool waitForDRDYHtoL( uint32_t timeout_ms );
-
+extern bool flag_nDRDY_INTERRUPT;
 
 //*****************************************************************************
 //
@@ -79,6 +63,25 @@ bool waitForDRDYHtoL( uint32_t timeout_ms );
 
 /** Alias used for setting GPIOs pins to the logic "low" state */
 #define LOW                 ((bool) false)
+
+//*****************************************************************************
+//
+// Function Prototypes
+//
+//*****************************************************************************
+
+void InitSpiADS124S08(void);
+void InitSpiGpioADC(void);
+void SetupGpioADC(void);
+uint16_t spi_xmit(uint16_t a);
+bool InitADCPeripherals( ADCchar_Set *adcChars);
+void toggleRESET( void );
+void sendWakeup(void);
+void setSTART( bool state );
+void sendSTOP(void);
+bool waitForDRDYHtoL( uint32_t timeout_ms );
+
+
 
 
 #endif /* ADCHAL_TIDRIVERS_ADAPTED_H_ */

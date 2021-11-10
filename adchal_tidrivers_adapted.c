@@ -27,9 +27,10 @@
 
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "F28x_Project.h"
 #include "ADS124S08.h"
-
+#include "adchal_tidrivers_adapted.h"
 
 //****************************************************************************
 //
@@ -37,8 +38,8 @@
 //
 //****************************************************************************
 
-// Flag to indicate if an interrupt occured
-extern volatile bool flag_nDRDY_INTERRUPT;
+// Flag to indicate if an interrupt occurred
+//bool flag_nDRDY_INTERRUPT;
 
 /************************************************************************************//**
  *

@@ -48,7 +48,7 @@ PAGE 1 :
 SECTIONS
 {
    codestart        : > BEGIN,     PAGE = 0
-   
+
 #ifdef __TI_COMPILER_VERSION__
    #if __TI_COMPILER_VERSION__ >= 15009000
     .TI.ramfunc : {} > RAMM0,      PAGE = 0
@@ -64,14 +64,17 @@ SECTIONS
    .reset           : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
 
    .stack           : > RAMM1,     PAGE = 1
-   .ebss            : > RAMLS5,    PAGE = 1
-   .econst          : > RAMLS5,    PAGE = 1
+//   .ebss            : > RAMLS5,    PAGE = 1
+   .ebss            : >> RAMLS5 | RAMGS5,    PAGE = 1
+   //.econst          : > RAMLS5,    PAGE = 1
+   .econst          : >> RAMLS5 | RAMGS5,    PAGE = 1
    .esysmem         : > RAMLS5,    PAGE = 1
    Filter_RegsFile  : > RAMGS0,	   PAGE = 1
 
    ramgs0           : > RAMGS0,    PAGE = 1
    ramgs1           : > RAMGS1,    PAGE = 1
    
+   .cio             : > RAMLS4,    PAGE = 0		// added by me (testing errors)
    /* The following section definitions are required when using the IPC API Drivers */ 
     GROUP : > CPU1TOCPU2RAM, PAGE = 1 
     {

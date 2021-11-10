@@ -61,6 +61,7 @@
 #include <math.h>
 #include "ADS124S08.h"
 #include "adchal_tidrivers_adapted.h"
+
 /* RTD related includes */
 #include "inc/rtd.h"
 #include "inc/rtd_tables.h"
@@ -306,9 +307,9 @@ void readRTDtemp(void){
 //                Display_printf( displayHdl, 0, 0, "ADC conversion result 2: %i\n", adcChars.adcValue2 );
 //            }
             if ( isnan(rtdTemp) ) {
-                Display_printf( displayHdl, 0, 0, "RTD temperature: NaN \n\n" );
+//                Display_printf( displayHdl, 0, 0, "RTD temperature: NaN \n\n" );
             } else {
-                Display_printf( displayHdl, 0, 0, "RTD temperature: %.3f (C)\n\n", rtdTemp );
+//                Display_printf( displayHdl, 0, 0, "RTD temperature: %.3f (C)\n\n", rtdTemp );
             }
 
         } else {

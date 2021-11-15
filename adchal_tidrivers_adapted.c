@@ -157,7 +157,10 @@ void InitSpiGpioADC(void)
     GpioCtrlRegs.GPBPUD.bit.GPIO58 = 0;  // Enable pull-up on GPIO58 (SPISIMOA)
     GpioCtrlRegs.GPBPUD.bit.GPIO59 = 0;  // Enable pull-up on GPIO59 (SPISOMIA)
     GpioCtrlRegs.GPBPUD.bit.GPIO60 = 0;  // Enable pull-up on GPIO60 (SPICLKA)
-    GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;  // Enable pull-up on GPIO61 (SPISTEA)
+//    GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;  // Enable pull-up on GPIO61 (SPISTEA)
+    GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;  // Enable pull-up on GPIO61 (/CS)
+
+    GpioDataRegs.GPBCLEAR.bit.GPIO61 = 1;
 
     //
     // Set qualification for selected pins to asynch only
@@ -167,7 +170,7 @@ void InitSpiGpioADC(void)
     GpioCtrlRegs.GPBQSEL2.bit.GPIO58 = 3; // Asynch input GPIO58 (SPISIMOA)
     GpioCtrlRegs.GPBQSEL2.bit.GPIO59 = 3; // Asynch input GPIO59 (SPISOMIA)
     GpioCtrlRegs.GPBQSEL2.bit.GPIO60 = 3; // Asynch input GPIO60 (SPICLKA)
-    GpioCtrlRegs.GPBQSEL2.bit.GPIO61 = 3; // Asynch input GPIO61 (SPISTEA)
+//    GpioCtrlRegs.GPBQSEL2.bit.GPIO61 = 3; // Asynch input GPIO61 (SPISTEA)
 
     //
     // Configure SPI-A pins using GPIO registers
@@ -185,12 +188,16 @@ void InitSpiGpioADC(void)
     GpioCtrlRegs.GPBGMUX2.bit.GPIO58 = 3;
     GpioCtrlRegs.GPBGMUX2.bit.GPIO59 = 3;
     GpioCtrlRegs.GPBGMUX2.bit.GPIO60 = 3;
-    GpioCtrlRegs.GPBGMUX2.bit.GPIO61 = 3;
+//    GpioCtrlRegs.GPBGMUX2.bit.GPIO61 = 3;    // define pin as SPISTEA
+    GpioCtrlRegs.GPBGMUX2.bit.GPIO61 = 0;    // define pin as GPIO (/CS)
 
     GpioCtrlRegs.GPBMUX2.bit.GPIO58 = 3;
     GpioCtrlRegs.GPBMUX2.bit.GPIO59 = 3;
     GpioCtrlRegs.GPBMUX2.bit.GPIO60 = 3;
-    GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 3;
+//    GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 3;    // define pin as SPISTEA
+    GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 0;    // define pin as GPIO (/CS)
+
+    GpioCtrlRegs.GPBDIR.bit.GPIO61 = 1;     // define /CS as output
 
     EDIS;
 }

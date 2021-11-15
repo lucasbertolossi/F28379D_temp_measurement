@@ -267,6 +267,7 @@ void readRTDtemp(void){
 
     if ( !InitADCPeripherals(&adcChars) ) {
         DisplayLCD(1, errorSpiConfig);
+        DisplayLCD(2, "");
 
         while (1);
     }
@@ -309,6 +310,7 @@ void readRTDtemp(void){
 //            sprintf(cRtdTemp, "%s %.3f C","Temp:", rtdTemp);
             if ( isnan(rtdTemp) ) {
                 DisplayLCD(1, "Temp: NaN");
+                DisplayLCD(2, "");
             } else {
 //                DisplayLCD(1, cRtdTemp);
             }
@@ -339,7 +341,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     uint16_t i = 0;
     // Provide additional delay time for power supply settling
     DELAY_US( DELAY_2p2MS );
-    GpioDataRegs.GPBSET.bit.GPIO61 = 1;
+
     // Toggle nRESET pin to assure default register settings.
     toggleRESET();
     // Must wait 4096 tCLK after reset

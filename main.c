@@ -155,20 +155,15 @@ int main(void)
     DisplayLCD(1, message);
     DisplayLCD(2, message2);
 
-//
-// Initializes ADS124S08 communication
+    // Initializes SPI and ADS124S08 communication
+    readRTDtemp();
+
+
+
 // - Test with global chop on
 // - Test with CRC and status byte
 //    Perform offset calibration before system gain calibration
 //
-//    DELAY_US(2200);
-
-//    InitSpiADS124S08();     // Configure SPI interface (CPOL = 0, CPHA =1);
-//
-//    InitSpiGpioADC();       // Initializes GPIO58 - GPIO61 as SPISIMOA, SPISOMIA, SPICLKA, SPISTEA.
-//
-//    SetupDRDYGpio();        // Sets GPIO0 as falling edge external interruption
-//    three functions above replaced by initADCperipherals() in adchal file
 
     while(1)
     {

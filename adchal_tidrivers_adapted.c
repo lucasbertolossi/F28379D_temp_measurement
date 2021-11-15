@@ -123,14 +123,11 @@ void InitSpiADS124S08(void)
     // Enable transmission (Talk)
     SpiaRegs.SPICTL.bit.TALK = 1;
 
-    // Step 4. Set SPISWRESET to 1 to release the SPI from the reset state.
-    SpiaRegs.SPICCR.bit.SPISWRESET = 1;
-
     // Set FREE bit
     // Halting on a breakpoint will not halt the SPI (debugging purposes)
     SpiaRegs.SPIPRI.bit.FREE = 1;
 
-    // Release the SPI from reset
+    // Step 4. Set SPISWRESET to 1 to release the SPI from the reset state.
     SpiaRegs.SPICCR.bit.SPISWRESET = 1;
 }
 
@@ -235,7 +232,7 @@ void SetupGpioADC(void){
     XintRegs.XINT2CR.bit.POLARITY = 1;          // Rising edge interrupt
 
     //
-    // Enable XINT1 and XINT2
+    // Enable XINT1
     //
     XintRegs.XINT1CR.bit.ENABLE = 1;            // Enable XINT1
 
@@ -308,9 +305,9 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
 //        Display_printf( displayHdl, 0, 0, "Master SPI initialized\n" );
 //    }
 
-    InitSpiADS124S08();     // Configures SPI interface (CPOL = 0, CPHA =1);
-
     InitSpiGpioADC();       // Configures GPIO58 - GPIO61 as SPISIMOA, SPISOMIA, SPICLKA, SPISTEA.
+
+    InitSpiADS124S08();     // Configures SPI interface (CPOL = 0, CPHA =1);
 
     SetupGpioADC();         // Configures GPIO for pins START and /RESET
                             // Configure external interruption for DRDY

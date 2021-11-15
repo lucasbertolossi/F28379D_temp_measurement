@@ -61,6 +61,8 @@
 #include <math.h>
 #include "ADS124S08.h"
 #include "adchal_tidrivers_adapted.h"
+#include "F28379D_lcd.h"
+#include <stdio.h>
 
 /* RTD related includes */
 #include "inc/rtd.h"
@@ -215,7 +217,9 @@ void readRTDtemp(void){
     float       rtdRes, rtdTemp;
     ADCchar_Set adcChars;
     uint16_t     status;
-
+//    char cRtdTemp[16] = {0};
+//    char errorTimeOut[] = "Timeout on conv.";
+    char errorSpiConfig[] = "Error in SPI";
 
 
     switch ( rtdType ) {
@@ -261,12 +265,8 @@ void readRTDtemp(void){
     }
     adcChars.VBIASReg = RTD_VBIAS;
 
-    /* add in device initialization */
-    //        Display_printf( displayHdl, 0, 0, "Error initializing master SPI\n" );
-    // previous argument of function below ^
-    //        DisplayLCD(1, "Error init.")
-    //        DisplayLCD(2, "master SPI");
     if ( !InitADCPeripherals(&adcChars) ) {
+        DisplayLCD(1, errorSpiConfig);
 
         while (1);
     }
@@ -306,14 +306,15 @@ void readRTDtemp(void){
 //            if ( rtdSet->wiring == Three_Wire_High_Side_Ref_One_IDAC || rtdSet->wiring == Three_Wire_Low_Side_Ref_One_IDAC ) {
 //                Display_printf( displayHdl, 0, 0, "ADC conversion result 2: %i\n", adcChars.adcValue2 );
 //            }
+//            sprintf(cRtdTemp, "%s %.3f C","Temp:", rtdTemp);
             if ( isnan(rtdTemp) ) {
-//                Display_printf( displayHdl, 0, 0, "RTD temperature: NaN \n\n" );
+                DisplayLCD(1, "Temp: NaN");
             } else {
-//                Display_printf( displayHdl, 0, 0, "RTD temperature: %.3f (C)\n\n", rtdTemp );
+//                DisplayLCD(1, cRtdTemp);
             }
 
         } else {
-//            Display_printf( displayHdl, 0, 0, "Timeout on conversion\n" );
+//            DisplayLCD(1, errorTimeOut);
             while (1);
         }
 
@@ -334,10 +335,11 @@ void readRTDtemp(void){
 bool adcStartupRoutine(ADCchar_Set *adcChars)
 {
     uint16_t initRegisterMap[NUM_REGISTERS] = { 0 };   // adapted from 8 bits to 16
-    uint16_t status, i;                                // adapted from 8 bits to 16
+    uint16_t status;                                // adapted from 8 bits to 16
+    uint16_t i = 0;
     // Provide additional delay time for power supply settling
     DELAY_US( DELAY_2p2MS );
-
+    GpioDataRegs.GPBSET.bit.GPIO61 = 1;
     // Toggle nRESET pin to assure default register settings.
     toggleRESET();
     // Must wait 4096 tCLK after reset

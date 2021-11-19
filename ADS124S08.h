@@ -47,7 +47,7 @@
 /* Start definitions */
 #ifndef ADS124S08_H_
 #define ADS124S08_H_
-
+#include "F28x_Project.h"
 #include <stdint.h>
 
 /********************************************************************************//**
@@ -650,6 +650,17 @@ extern bool converting;
 //
 //*****************************************************************************
 
+inline uint16_t xferWord(uint16_t tx)
+{
+    uint16_t rx;
+    /* Set up data for the next xmit */
+    SpiaRegs.SPITXBUF = (tx << 8);
+    /* Wait for data to appear */
+    while(SpiaRegs.SPIFFRX.bit.RXFFST!=1){ };
+    /* Grab that data*/
+    rx = SpiaRegs.SPIRXBUF;
+    return rx;
+}
 //    Function prototypes
     uint16_t getRegisterValue( uint16_t address );
     void regWrite(uint16_t regnum, uint16_t data);
@@ -660,6 +671,8 @@ extern bool converting;
     void startConversions(void);
     void stopConversions(void);
     int32_t readConvertedData(uint16_t status[], readMode mode );
+    void clearChipSelect(void);
+    void setChipSelect(void);
 
 //    ADS124S08 Datasheet code sequence example
 //

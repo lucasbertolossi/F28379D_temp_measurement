@@ -117,8 +117,9 @@ void InitSpiADS124S08(void)
     // • In FIFO mode, set the transmit and receive interrupt levels (TXFFIL and RXFFIL) then
     // enable the interrupts (TXFFIENA and RXFFIENA). (bits 4-0)
     // SPI interrupts are disabled (SPICTL.SPIINTENA) by default // FIFO interrupts are disabled
-    SpiaRegs.SPIFFTX.all = 0xE040;
-    SpiaRegs.SPIFFRX.all = 0x2040;
+    SpiaRegs.SPIFFTX.all = 0xE040;  // 1110 0000 0100 0000
+    SpiaRegs.SPIFFRX.all = 0x2040;  // 0010 0000 0100 0000
+//    SpiaRegs.SPIFFRX.all = 0x6061; // RX int on, triggers when 1 or more words in RXFF
 
     // Enable transmission (Talk)
     SpiaRegs.SPICTL.bit.TALK = 1;
@@ -160,7 +161,7 @@ void InitSpiGpioADC(void)
 //    GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;  // Enable pull-up on GPIO61 (SPISTEA)
     GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;  // Enable pull-up on GPIO61 (/CS)
 
-    GpioDataRegs.GPBCLEAR.bit.GPIO61 = 1;
+    GpioDataRegs.GPBSET.bit.GPIO61 = 1;  // / /CS = 1 / disabled
 
     //
     // Set qualification for selected pins to asynch only
@@ -226,7 +227,6 @@ void SetupGpioADC(void){
     GpioCtrlRegs.GPADIR.bit.GPIO0 = 0;          // input
     GpioCtrlRegs.GPAQSEL1.bit.GPIO0 = 0;        // XINT1 Synch to SYSCLKOUT only
     EDIS;
-
     //
     // GPIO0 is XINT1
     //
@@ -271,12 +271,11 @@ void SetupGpioADC(void){
 uint16_t spi_xmit(uint16_t a)
 {
     uint16_t rx;
-    SpiaRegs.SPITXBUF = a << 8;
+    SpiaRegs.SPITXBUF = (a << 8);
     while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // maybe needs to change to interrupt depending on adc returning value or not
     rx = SpiaRegs.SPIRXBUF;
     return rx;
 }
-
 
 
 /************************************************************************************//**
@@ -348,6 +347,7 @@ void toggleRESET( void )
     DELAY_US( DELAY_4TCLK );
 
     GpioDataRegs.GPASET.bit.GPIO1 = 1;
+    EDIS;
 }
 
 

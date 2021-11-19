@@ -107,20 +107,20 @@ uint16_t getRegisterValue( uint16_t address )
 }
 
 
-//// Commented because I am trying to use SPISTEA and not GPIO /CS
+//// Comment if using SPISTEA and not GPIO /CS
 //// clearShipSelect - Sets CS Pin to low and delay for a minimum of td(CSSC)
 ////
-//void clearChipSelect(void){
-//    GpioDataRegs.GPBCLEAR.bit.GPIO61 = 1;
-//    DELAY_US(td_CSSC);               // Delays for 1 microsecond (minimum is 20 ns)
-//}
+void clearChipSelect(void){
+    GpioDataRegs.GPBCLEAR.bit.GPIO61 = 1;
+    DELAY_US(td_CSSC);               // Delays for 1 microsecond (minimum is 20 ns)
+}
 //
 ////
 //// setChipSelect - Sets CS Pin to high. Performs no waiting.
 ////
-//void setChipSelect(void){
-//    GpioDataRegs.GPBSET.bit.GPIO61 = 1;
-//}
+void setChipSelect(void){
+    GpioDataRegs.GPBSET.bit.GPIO61 = 1;
+}
 
 
 //void spi_send(uint16_t data)
@@ -135,21 +135,28 @@ uint16_t getRegisterValue( uint16_t address )
 void regWrite(uint16_t regnum, uint16_t data)
 {
     uint16_t iDataTx[3];
-    uint16_t iDataRx[3];
+    uint16_t iDataRx[3] = { 0xffff, 0xffff, 0xffff };
     uint16_t i;
-//    iDataTx[0] = (OPCODE_WREG + (regnum & 0x1f)) << 8;
-    iDataTx[0] = OPCODE_WREG + (regnum & 0x1f);
+    uint16_t junk;
+    iDataTx[0] = (0x0000 | (OPCODE_WREG | (regnum & 0x1f)));
     iDataTx[1] = 0x0000;
-//    iDataTx[2] = data << 8;
     iDataTx[2] = data;
-//    clearChipSelect();
-    for (i = 0; i < 3; i++){
-        iDataRx[i] = spi_xmit(iDataTx[i]);
-//        while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // mayybe needs to change to interrupt depending on adc returning value or not
+    clearChipSelect();
+//    junk = SpiaRegs.SPIRXBUF;
+    xferWord(iDataTx[0]);
+    xferWord(iDataTx[1]);
+    xferWord(iDataTx[2]);
+//    for (i = 0; i < 3; i++){
+//        iDataRx[i] = spi_xmit(iDataTx[i]);
+//        }
+//    for(i = 0; i < 3; i++){
+//        SpiaRegs.SPITXBUF = (iDataTx[i] << 8);
+//        while(SpiaRegs.SPIFFRX.bit.RXFFINT !=1) { };
 //        iDataRx[i] = SpiaRegs.SPIRXBUF;
-        }
-//    setChipSelect();
-//    return iDataRx[2];    // doesn't need to return, but im testing loopback
+//        SpiaRegs.SPIFFRX.bit.RXFFINTCLR = 1;
+//    }
+    setChipSelect();
+    return;
 }
 
 
@@ -163,21 +170,33 @@ void regWrite(uint16_t regnum, uint16_t data)
 uint16_t regRead(uint16_t regnum)
 {
     uint16_t iDataTx[3];
-    uint16_t iDataRx[3];
+    uint16_t iDataRx[3] = {0xffff, 0xffff, 0xffff};
     uint16_t i;
-    //    uint16_t junk;
-    iDataTx[0] = (OPCODE_RREG + (regnum & 0x1f)) << 8;
+    uint16_t junk;
+    iDataTx[0] = (0x0000 | (OPCODE_RREG | (regnum & 0x1f)));
     iDataTx[1] = 0x00;
-    iDataTx[2] = 0x00;    // just clock data into RX buffer
-//    clearChipSelect();
+    iDataTx[2] = 0x00;    // clock data into TX buffer to read data
+
+    clearChipSelect();
 //    /* MUST MUST MUST purge junk from fifo!!!! */
 //    while(SSIDataGetNonBlocking(SPI_BASE, &junk));
+    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0){
+        junk = SpiaRegs.SPIRXBUF;
+    }
+    junk = SpiaRegs.SPIRXBUF;
+
     for(i = 0; i < 3; i++){
-        iDataRx[i] = spi_xmit(iDataTx[i]);
+        SpiaRegs.SPITXBUF = (iDataTx[i] << 8);
+        while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // maybe needs to change to interrupt depending on adc returning value or not
+        iDataRx[i] = SpiaRegs.SPIRXBUF;
         }
-//    if(regnum < NUM_REGISTERS)
-//            registers[regnum] = iDataRx[2];
-//    setChipSelect();
+//    for(i = 0; i < 3; i++){
+//        SpiaRegs.SPITXBUF = (iDataTx[i] << 8);
+//        while(SpiaRegs.SPIFFRX.bit.RXFFINT !=1) { };
+//        iDataRx[i] = SpiaRegs.SPIRXBUF;
+//        SpiaRegs.SPIFFRX.bit.RXFFINTCLR = 1;
+//    }
+    setChipSelect();
     return iDataRx[2];
 }
 ////
@@ -339,14 +358,48 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     uint16_t initRegisterMap[NUM_REGISTERS] = { 0 };   // adapted from 8 bits to 16
     uint16_t status;                                // adapted from 8 bits to 16
     uint16_t i = 0;
+//    uint16_t status_a = 0x4444;
+//    uint16_t status_b = 0x4444;
+//    uint16_t status_c = 0x4444;
+//    uint16_t status_d = 0x4444;
+//    uint16_t status_e = 0x4444;
+//    uint16_t status_f = 0x4444;
+//    uint16_t status_g = 0x4444;
+//    uint16_t status_h = 0x4444;
+//    uint16_t status_i = 0x4444;
+//    uint16_t inpmux = 0x4444;
+    uint16_t j = 0;
+
+
+
     // Provide additional delay time for power supply settling
     DELAY_US( DELAY_2p2MS );
 
+    clearChipSelect();
     // Toggle nRESET pin to assure default register settings.
     toggleRESET();
     // Must wait 4096 tCLK after reset
     DELAY_US( DELAY_4096TCLK );
+    setChipSelect();
+// TEST
 
+    // Ensure internal register array is initialized
+    restoreRegisterDefaults();
+
+    // Read back all registers
+//    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
+    registerMap[REG_ADDR_ID] = regRead(REG_ADDR_ID);
+    registerMap[REG_ADDR_STATUS] = regRead(REG_ADDR_STATUS);
+    registerMap[REG_ADDR_INPMUX] = regRead(REG_ADDR_INPMUX);
+    registerMap[REG_ADDR_PGA] = regRead(REG_ADDR_PGA);
+    registerMap[REG_ADDR_DATARATE] = regRead(REG_ADDR_DATARATE);
+    registerMap[REG_ADDR_REF] = regRead(REG_ADDR_REF);
+    registerMap[REG_ADDR_IDACMAG] = regRead(REG_ADDR_IDACMAG);
+    registerMap[REG_ADDR_IDACMUX] = regRead(REG_ADDR_IDACMUX);
+    registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
+    registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
+
+// TEST
     status = regRead(REG_ADDR_STATUS);
     if ( (status & ADS_nRDY_MASK) ) {
         return( false );                      // Device not ready
@@ -377,7 +430,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     // Write to all modified registers
 //    writeMultipleRegisters( spiHdl, REG_ADDR_STATUS, REG_ADDR_SYS - REG_ADDR_STATUS + 1, initRegisterMap );
     // Can improve this following part in the future
-//    regWrite(REG_ADDR_ID, );
+    regWrite(REG_ADDR_ID, 0x00);
     regWrite(REG_ADDR_STATUS, 0x00);
     regWrite(REG_ADDR_INPMUX, adcChars->inputMuxConfReg);
     regWrite(REG_ADDR_PGA, adcChars->pgaReg);
@@ -388,6 +441,21 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
     regWrite(REG_ADDR_SYS, SYS_DEFAULT);
 
+    DELAY_US(10);
+//    regWrite(REG_ADDR_ID, 0x00);
+//    regWrite(REG_ADDR_STATUS, 0x00);
+//    regWrite(REG_ADDR_INPMUX, adcChars->inputMuxConfReg);
+//    regWrite(REG_ADDR_PGA, adcChars->pgaReg);
+//    regWrite(REG_ADDR_DATARATE, adcChars->dataRateReg);
+//    regWrite(REG_ADDR_REF, adcChars->refSelReg);
+//    regWrite(REG_ADDR_IDACMAG, adcChars->IDACmagReg);
+//    regWrite(REG_ADDR_IDACMUX, adcChars->IDACmuxReg);
+//    regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
+//    regWrite(REG_ADDR_SYS, SYS_DEFAULT);
+
+//    setChipSelect();
+//
+//    clearChipSelect();
 
     // Read back all registers
 //    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
@@ -402,6 +470,8 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
 
 
+
+//    while(1){}
     // Check if all registers were written correctly
     for ( i = REG_ADDR_STATUS; i < REG_ADDR_SYS - REG_ADDR_STATUS + 1; i++ ) {
         if ( i == REG_ADDR_STATUS )         // ignores status register in case POR flag is set
@@ -416,7 +486,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
  /************************************************************************************//**
   *
   * @brief restoreRegisterDefaults()
-  *          Updates the registerMap[] array to its default values
+  *          Updates the registerMap[]  array to its default values
   *          NOTES: If the MCU keeps a copy of the ADC register settings in memory,
   *          then it is important to ensure that these values remain in sync with the
   *          actual hardware settings. In order to help facilitate this, this function

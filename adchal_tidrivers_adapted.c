@@ -81,7 +81,7 @@ void InitSpiADS124S08(void)
 
     // • Choose SPICLK polarity and phase (CLKPOLARITY and CLK_PHASE). SPI mode 1 selected.
     //   Clock polarity (0 == rising, 1 == falling), ADS124S08 operates in SPI mode 1 (CPOL = 0, CPHA = 1)
-    SpiaRegs.SPICCR.bit.CLKPOLARITY = 0;
+    SpiaRegs.SPICCR.bit.CLKPOLARITY = 1;
     //   Clock phase (0 == normal, 1 == delayed)
     SpiaRegs.SPICTL.bit.CLK_PHASE = 1;
 
@@ -344,7 +344,8 @@ void toggleRESET( void )
     GpioDataRegs.GPACLEAR.bit.GPIO1 = 1;
 
     // Minimum nRESET width: 4 tCLKs = 4 * 1/4.096MHz =
-    DELAY_US( DELAY_4TCLK );
+//    DELAY_US( DELAY_4TCLK );
+    DELAY_US(1);
 
     GpioDataRegs.GPASET.bit.GPIO1 = 1;
     EDIS;

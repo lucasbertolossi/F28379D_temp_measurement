@@ -74,7 +74,7 @@ typedef enum RTDExampleDef{
     RTD_4_Wire_Fig16,     // 4-Wire RTD example using ADS124S08 EVM, User's Guide Figure 16
 } RTD_Example;
 
-#define td_CSSC 1000000   // Delay time, first SCLK rising edge after CS falling edge (min 20 ns, no maximum value)
+#define td_CSSC 1   // Delay 1 us first SCLK rising edge after CS falling edge, min 20 ns
 
 //****************************************************************************
 //
@@ -111,15 +111,18 @@ uint16_t getRegisterValue( uint16_t address )
 //// clearShipSelect - Sets CS Pin to low and delay for a minimum of td(CSSC)
 ////
 void clearChipSelect(void){
+    DELAY_US(1);
     GpioDataRegs.GPBCLEAR.bit.GPIO61 = 1;
-    DELAY_US(td_CSSC);               // Delays for 1 microsecond (minimum is 20 ns)
+    DELAY_US(td_CSSC);               // Delays for 1 us (minimum is 20 ns)
 }
 //
 ////
 //// setChipSelect - Sets CS Pin to high. Performs no waiting.
 ////
 void setChipSelect(void){
+    DELAY_US(1);
     GpioDataRegs.GPBSET.bit.GPIO61 = 1;
+    DELAY_US(td_CSSC);              // Delays for 1 us (minimum is 20 ns)
 }
 
 
@@ -372,32 +375,83 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
 
 
 
+
     // Provide additional delay time for power supply settling
     DELAY_US( DELAY_2p2MS );
 
     clearChipSelect();
     // Toggle nRESET pin to assure default register settings.
     toggleRESET();
+
     // Must wait 4096 tCLK after reset
-    DELAY_US( DELAY_4096TCLK );
+//    DELAY_US( DELAY_4096TCLK );
+    DELAY_US(1000*5);
     setChipSelect();
 // TEST
 
     // Ensure internal register array is initialized
     restoreRegisterDefaults();
 
+
+    // Write all registers
+//    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
+    uint16_t countt = 10;    // number of registers to read
+    uint16_t uiWriteInitialRegistersADC[10] = {0x00, 0x00, 0x24, 0x09, 0x14, 0x06, 0x07, 0xF5, 0x00, 0x10 };
+    uint16_t junkk;
+    uint16_t uiDataInitialTx[2];
+
+    // clear junk
+    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
+        junkk = SpiaRegs.SPIRXBUF;
+    }
+    junkk = SpiaRegs.SPIRXBUF;
+
+    uiDataInitialTx[0] = OPCODE_WREG + (0x00 & 0x1f);
+    uiDataInitialTx[1] = countt-1;
+
+    clearChipSelect();
+    xferWord(uiDataInitialTx[0]);
+    xferWord(uiDataInitialTx[1]);
+    for(i = 0; i < countt; i++)
+    {
+        xferWord(uiWriteInitialRegistersADC[i]);
+//        if(regnum+i < NUM_REGISTERS)
+//            registers[regnum+i] = data[i];
+    }
+    setChipSelect();
+
     // Read back all registers
 //    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
-    registerMap[REG_ADDR_ID] = regRead(REG_ADDR_ID);
-    registerMap[REG_ADDR_STATUS] = regRead(REG_ADDR_STATUS);
-    registerMap[REG_ADDR_INPMUX] = regRead(REG_ADDR_INPMUX);
-    registerMap[REG_ADDR_PGA] = regRead(REG_ADDR_PGA);
-    registerMap[REG_ADDR_DATARATE] = regRead(REG_ADDR_DATARATE);
-    registerMap[REG_ADDR_REF] = regRead(REG_ADDR_REF);
-    registerMap[REG_ADDR_IDACMAG] = regRead(REG_ADDR_IDACMAG);
-    registerMap[REG_ADDR_IDACMUX] = regRead(REG_ADDR_IDACMUX);
-    registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
-    registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
+    uint16_t count = 10;    // number of registers to read
+    uint16_t uiInitialRegistersADC[10] = {0};
+    uint16_t uiDataTx[2];
+    uint16_t junk;
+    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
+        junk = SpiaRegs.SPIRXBUF;
+    }
+    junk = SpiaRegs.SPIRXBUF;
+    uiDataTx[0] = OPCODE_RREG + (0x00 & 0x1f);
+    uiDataTx[1] = count-1;
+    clearChipSelect();
+    xferWord(uiDataTx[0]);
+    xferWord(uiDataTx[1]);
+    for(i = 0; i < count; i++)
+    {
+        uiInitialRegistersADC[i] = xferWord(0);
+//        if(regnum+i < NUM_REGISTERS)
+//            registers[regnum+i] = data[i];
+    }
+    setChipSelect();
+//    registerMap[REG_ADDR_ID] = regRead(REG_ADDR_ID);
+//    registerMap[REG_ADDR_STATUS] = regRead(REG_ADDR_STATUS);
+//    registerMap[REG_ADDR_INPMUX] = regRead(REG_ADDR_INPMUX);
+//    registerMap[REG_ADDR_PGA] = regRead(REG_ADDR_PGA);
+//    registerMap[REG_ADDR_DATARATE] = regRead(REG_ADDR_DATARATE);
+//    registerMap[REG_ADDR_REF] = regRead(REG_ADDR_REF);
+//    registerMap[REG_ADDR_IDACMAG] = regRead(REG_ADDR_IDACMAG);
+//    registerMap[REG_ADDR_IDACMUX] = regRead(REG_ADDR_IDACMUX);
+//    registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
+//    registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
 
 // TEST
     status = regRead(REG_ADDR_STATUS);

@@ -48,6 +48,7 @@
 //
 // Included Files
 //
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "F28x_Project.h"
@@ -66,16 +67,17 @@
 //volatile uint32_t xINT1Count;
 volatile uint16_t dataw;
 // Debug messages to display in LCD
-char message[] = "LAUNCHXL";
-char message2[] = "F28379D";
+char message[] = "F28379D";
 
 bool flag_nDRDY_INTERRUPT = false;
 
 //
 // Function Prototypes
 //
-interrupt void xint1_isr(void);
-
+__interrupt void xint1_isr(void);
+__interrupt void cpu_timer0_isr(void);
+//__interrupt void cpu_timer1_isr(void);
+//__interrupt void cpu_timer2_isr(void);
 //
 // Main
 //
@@ -121,24 +123,56 @@ int main(void)
     InitPieVectTable();
 
 //
-// Interrupts that are used in this example are re-mapped to
-// ISR functions found within this file (DefaultISR.c).
+// Interrupts are re-mapped to ISR functions found within this project (DefaultISR.c)
 //
-    EALLOW;  // This is needed to write to EALLOW protected registers
+    EALLOW;
     PieVectTable.XINT1_INT = &xint1_isr;
-    EDIS;    // This is needed to disable write to EALLOW protected registers
+    PieVectTable.TIMER0_INT = &cpu_timer0_isr;
+//    PieVectTable.TIMER1_INT = &cpu_timer1_isr;
+//    PieVectTable.TIMER2_INT = &cpu_timer2_isr;
+    EDIS;
+
+//
+// Initialize the Device Peripheral. This function can be found
+// in F2837xD_CpuTimers.c
+//
+    InitCpuTimers();   // For this example, only initialize the Cpu Timers
+
+
+//
+// Configure CPU-Timer 0, 1, and 2 to interrupt every second:
+// 200MHz CPU Freq, 1 second Period (in uSeconds)
+//
+    ConfigCpuTimer(&CpuTimer0, 200, 1000000);
+//    ConfigCpuTimer(&CpuTimer1, 200, 1000000);
+//    ConfigCpuTimer(&CpuTimer2, 200, 1000000);
+
+
+//
+// To ensure precise timing, use write-only instructions to write to the
+// entire register. Therefore, if any of the configuration bits are changed in
+// ConfigCpuTimer and InitCpuTimers (in F2837xD_cputimervars.h), the below
+// settings must also be updated.
+//
+    CpuTimer0Regs.TCR.all = 0x4000;
+//    CpuTimer1Regs.TCR.all = 0x4000;
+//    CpuTimer2Regs.TCR.all = 0x4000;
+
 
 //
 // Clear the counter
 //
-//    xINT1Count = 0;                             // Count XINT1 interrupts
+//    xINT1Count = 0;       // Count XINT1 interrupts
+
 
 //
 // Enable XINT1 in the PIE: Group 1 interrupt 4
 // Enable INT1 which is connected to WAKEINT:
 //
     PieCtrlRegs.PIEIER1.bit.INTx4 = 1;          // Enable PIE Group 1 INT4
-    IER |= M_INT1;                              // Enable CPU INT1
+    IER |= M_INT1;                              // Enable CPU INT1 (timer 0)
+//    IER |= M_INT13;                         // Enable CPU INT13 (timer 1)
+//    IER |= M_INT14;                         // Enable CPU INT14 (timer 2)
 
 
 //
@@ -152,36 +186,31 @@ int main(void)
 //
     Gpio_Setup_LCD();       // Enable GPIO for LCD as output pins on GPIO4 - GPIO11, GPIO14 - GPIO15;
     InitializeLCD();        // Initialize LCD;
-    DisplayLCD(1, message);
-    DisplayLCD(2, message2);
+    DisplayLCD(1, "Initializing");
+    DisplayLCD(2, "Program");
 
     // Initializes SPI and ADS124S08 communication
     readRTDtemp();
 
-
-
 // - Test with global chop on
 // - Test with CRC and status byte
-//    Perform offset calibration before system gain calibration
+//   Perform offset calibration before system gain calibration
 //
 
     while(1)
     {
-
 
     }
 
 }
 
 // External interrupt XINT1 indicates availability of new conversion data.
-interrupt void xint1_isr(void)
+__interrupt void xint1_isr(void)
 {
 //    xINT1Count++; // Watch variable - checking if /DRDY is going low after each conversion
 
     /* Set nDRDY flag to true */
     flag_nDRDY_INTERRUPT = true;
-
-
 
     //
     // Acknowledge this interrupt to get more interruptions from group 1
@@ -191,5 +220,39 @@ interrupt void xint1_isr(void)
 }
 
 //
+// cpu_timer0_isr - CPU Timer0 ISR with interrupt counter
+//
+__interrupt void cpu_timer0_isr(void)
+{
+   CpuTimer0.InterruptCount++;
+
+   //
+   // Acknowledge this interrupt to receive more interrupts from group 1
+   //
+   PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+//
+// cpu_timer1_isr - CPU Timer1 ISR
+//
+//__interrupt void cpu_timer1_isr(void)
+//{
+//   CpuTimer1.InterruptCount++;
+//}
+
+
+//
+//
+// cpu_timer2_isr CPU Timer2 ISR
+//
+//__interrupt void cpu_timer2_isr(void)
+//{
+//   CpuTimer2.InterruptCount++;
+//}
+
+
+
+//
 // End of file
 //
+

@@ -126,14 +126,6 @@ void setChipSelect(void){
 }
 
 
-//void spi_send(uint16_t data)
-//{
-////    data = data << 8;
-//    SpiaRegs.SPITXBUF = data;
-//}
-
-
-
 //uint16_t regWrite(uint16_t regnum, uint16_t data)
 void regWrite(uint16_t regnum, uint16_t data)
 {
@@ -145,19 +137,9 @@ void regWrite(uint16_t regnum, uint16_t data)
     iDataTx[1] = 0x0000;
     iDataTx[2] = data;
     clearChipSelect();
-//    junk = SpiaRegs.SPIRXBUF;
     xferWord(iDataTx[0]);
     xferWord(iDataTx[1]);
     xferWord(iDataTx[2]);
-//    for (i = 0; i < 3; i++){
-//        iDataRx[i] = spi_xmit(iDataTx[i]);
-//        }
-//    for(i = 0; i < 3; i++){
-//        SpiaRegs.SPITXBUF = (iDataTx[i] << 8);
-//        while(SpiaRegs.SPIFFRX.bit.RXFFINT !=1) { };
-//        iDataRx[i] = SpiaRegs.SPIRXBUF;
-//        SpiaRegs.SPIFFRX.bit.RXFFINTCLR = 1;
-//    }
     setChipSelect();
     return;
 }
@@ -182,7 +164,6 @@ uint16_t regRead(uint16_t regnum)
 
     clearChipSelect();
 //    /* MUST MUST MUST purge junk from fifo!!!! */
-//    while(SSIDataGetNonBlocking(SPI_BASE, &junk));
     while(SpiaRegs.SPIFFRX.bit.RXFFST != 0){
         junk = SpiaRegs.SPIRXBUF;
     }
@@ -190,15 +171,9 @@ uint16_t regRead(uint16_t regnum)
 
     for(i = 0; i < 3; i++){
         SpiaRegs.SPITXBUF = (iDataTx[i] << 8);
-        while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // maybe needs to change to interrupt depending on adc returning value or not
+        while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }
         iDataRx[i] = SpiaRegs.SPIRXBUF;
         }
-//    for(i = 0; i < 3; i++){
-//        SpiaRegs.SPITXBUF = (iDataTx[i] << 8);
-//        while(SpiaRegs.SPIFFRX.bit.RXFFINT !=1) { };
-//        iDataRx[i] = SpiaRegs.SPIRXBUF;
-//        SpiaRegs.SPIFFRX.bit.RXFFINTCLR = 1;
-//    }
     setChipSelect();
     return iDataRx[2];
 }
@@ -239,9 +214,9 @@ void readRTDtemp(void){
     float       rtdRes, rtdTemp;
     ADCchar_Set adcChars;
     uint16_t     status;
-//    char cRtdTemp[16] = {0};
-//    char errorTimeOut[] = "Timeout on conv.";
+    char errorTimeOut[] = "Timeout on conv.";
     char errorSpiConfig[] = "Error in SPI";
+    char* sTemperature;
 
 
     switch ( rtdType ) {
@@ -251,17 +226,6 @@ void readRTDtemp(void){
     }
 
     switch ( rtdExample ) {
-//        case RTD_2_Wire_Fig15:
-//            adcChars.inputMuxConfReg = RTD_TWO_WIRE_INPUT_MUX;
-//            adcChars.pgaReg          = RTD_TWO_WIRE_PGA;
-//            adcChars.dataRateReg     = RTD_TWO_WIRE_DATARATE;
-//            adcChars.refSelReg       = RTD_TWO_WIRE_REF_SEL;
-//            adcChars.IDACmagReg      = RTD_TWO_WIRE_IDACMAG;
-//            adcChars.IDACmuxReg      = RTD_TWO_WIRE_IDACMUX;
-//            adcChars.Vref            = RTD_TWO_WIRE_EXT_VREF;
-//            rtdSet->Rref             = RTD_TWO_WIRE_REF_RES;
-//            rtdSet->wiring           = Two_Wire_High_Side_Ref;
-//            break;
 //        case RTD_3_Wire_Fig14:
 //            adcChars.inputMuxConfReg = RTD_THREE_WIRE_INPUT_MUX;
 //            adcChars.pgaReg          = RTD_THREE_WIRE_PGA;
@@ -289,7 +253,7 @@ void readRTDtemp(void){
 
     if ( !InitADCPeripherals(&adcChars) ) {
         DisplayLCD(1, errorSpiConfig);
-        DisplayLCD(2, "");
+//        DisplayLCD(2, "");
 
         while (1);
     }
@@ -329,16 +293,17 @@ void readRTDtemp(void){
 //            if ( rtdSet->wiring == Three_Wire_High_Side_Ref_One_IDAC || rtdSet->wiring == Three_Wire_Low_Side_Ref_One_IDAC ) {
 //                Display_printf( displayHdl, 0, 0, "ADC conversion result 2: %i\n", adcChars.adcValue2 );
 //            }
-//            sprintf(cRtdTemp, "%s %.3f C","Temp:", rtdTemp);
+
             if ( isnan(rtdTemp) ) {
                 DisplayLCD(1, "Temp: NaN");
                 DisplayLCD(2, "");
             } else {
-//                DisplayLCD(1, cRtdTemp);
+                floatToChar(rtdTemp, sTemperature);
+                DisplayLCD(1, sTemperature);
             }
-
         } else {
-//            DisplayLCD(1, errorTimeOut);
+            DisplayLCD(1, errorTimeOut);
+            DisplayLCD(2, "");
             while (1);
         }
 
@@ -361,20 +326,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     uint16_t initRegisterMap[NUM_REGISTERS] = { 0 };   // adapted from 8 bits to 16
     uint16_t status;                                // adapted from 8 bits to 16
     uint16_t i = 0;
-//    uint16_t status_a = 0x4444;
-//    uint16_t status_b = 0x4444;
-//    uint16_t status_c = 0x4444;
-//    uint16_t status_d = 0x4444;
-//    uint16_t status_e = 0x4444;
-//    uint16_t status_f = 0x4444;
-//    uint16_t status_g = 0x4444;
-//    uint16_t status_h = 0x4444;
-//    uint16_t status_i = 0x4444;
-//    uint16_t inpmux = 0x4444;
-    uint16_t j = 0;
-
-
-
 
     // Provide additional delay time for power supply settling
     DELAY_US( DELAY_2p2MS );
@@ -383,76 +334,59 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     // Toggle nRESET pin to assure default register settings.
     toggleRESET();
 
-    // Must wait 4096 tCLK after reset
+    // Must wait minimum 4096 tCLK after reset
 //    DELAY_US( DELAY_4096TCLK );
     DELAY_US(1000*5);
     setChipSelect();
-// TEST
 
     // Ensure internal register array is initialized
     restoreRegisterDefaults();
-
-
-    // Write all registers
-//    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
-    uint16_t countt = 10;    // number of registers to read
-    uint16_t uiWriteInitialRegistersADC[10] = {0x00, 0x00, 0x24, 0x09, 0x14, 0x06, 0x07, 0xF5, 0x00, 0x10 };
-    uint16_t junkk;
-    uint16_t uiDataInitialTx[2];
-
-    // clear junk
-    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
-        junkk = SpiaRegs.SPIRXBUF;
-    }
-    junkk = SpiaRegs.SPIRXBUF;
-
-    uiDataInitialTx[0] = OPCODE_WREG + (0x00 & 0x1f);
-    uiDataInitialTx[1] = countt-1;
-
-    clearChipSelect();
-    xferWord(uiDataInitialTx[0]);
-    xferWord(uiDataInitialTx[1]);
-    for(i = 0; i < countt; i++)
-    {
-        xferWord(uiWriteInitialRegistersADC[i]);
-//        if(regnum+i < NUM_REGISTERS)
-//            registers[regnum+i] = data[i];
-    }
-    setChipSelect();
-
-    // Read back all registers
-//    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
-    uint16_t count = 10;    // number of registers to read
-    uint16_t uiInitialRegistersADC[10] = {0};
-    uint16_t uiDataTx[2];
-    uint16_t junk;
-    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
-        junk = SpiaRegs.SPIRXBUF;
-    }
-    junk = SpiaRegs.SPIRXBUF;
-    uiDataTx[0] = OPCODE_RREG + (0x00 & 0x1f);
-    uiDataTx[1] = count-1;
-    clearChipSelect();
-    xferWord(uiDataTx[0]);
-    xferWord(uiDataTx[1]);
-    for(i = 0; i < count; i++)
-    {
-        uiInitialRegistersADC[i] = xferWord(0);
-//        if(regnum+i < NUM_REGISTERS)
-//            registers[regnum+i] = data[i];
-    }
-    setChipSelect();
-//    registerMap[REG_ADDR_ID] = regRead(REG_ADDR_ID);
-//    registerMap[REG_ADDR_STATUS] = regRead(REG_ADDR_STATUS);
-//    registerMap[REG_ADDR_INPMUX] = regRead(REG_ADDR_INPMUX);
-//    registerMap[REG_ADDR_PGA] = regRead(REG_ADDR_PGA);
-//    registerMap[REG_ADDR_DATARATE] = regRead(REG_ADDR_DATARATE);
-//    registerMap[REG_ADDR_REF] = regRead(REG_ADDR_REF);
-//    registerMap[REG_ADDR_IDACMAG] = regRead(REG_ADDR_IDACMAG);
-//    registerMap[REG_ADDR_IDACMUX] = regRead(REG_ADDR_IDACMUX);
-//    registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
-//    registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
-
+//
+//
+//    // Write all registers
+//    uint16_t countt = 10;    // number of registers to read
+//    uint16_t uiWriteInitialRegistersADC[10] = {0x00, 0x00, 0x24, 0x09, 0x14, 0x06, 0x07, 0xF5, 0x00, 0x10 };
+//    uint16_t junkk;
+//    uint16_t uiDataInitialTx[2];
+//
+//    // clear junk
+//    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
+//        junkk = SpiaRegs.SPIRXBUF;
+//    }
+//    junkk = SpiaRegs.SPIRXBUF;
+//
+//    uiDataInitialTx[0] = OPCODE_WREG + (0x00 & 0x1f);
+//    uiDataInitialTx[1] = countt-1;
+//
+//    clearChipSelect();
+//    xferWord(uiDataInitialTx[0]);
+//    xferWord(uiDataInitialTx[1]);
+//    for(i = 0; i < countt; i++)
+//    {
+//        xferWord(uiWriteInitialRegistersADC[i]);
+//    }
+//    setChipSelect();
+//
+//    // Read back all registers
+//    uint16_t count = 10;    // number of registers to read
+//    uint16_t uiInitialRegistersADC[10] = {0};
+//    uint16_t uiDataTx[2];
+//    uint16_t junk;
+//    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
+//        junk = SpiaRegs.SPIRXBUF;
+//    }
+//    junk = SpiaRegs.SPIRXBUF;
+//    uiDataTx[0] = OPCODE_RREG + (0x00 & 0x1f);
+//    uiDataTx[1] = count-1;
+//    clearChipSelect();
+//    xferWord(uiDataTx[0]);
+//    xferWord(uiDataTx[1]);
+//    for(i = 0; i < count; i++)
+//    {
+//        uiInitialRegistersADC[i] = xferWord(0);
+//    }
+//    setChipSelect();
+//
 // TEST
     status = regRead(REG_ADDR_STATUS);
     if ( (status & ADS_nRDY_MASK) ) {
@@ -482,8 +416,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     adcChars->pgaGain        = pow(2, (adcChars->pgaReg & ADS_GAIN_MASK) );
 
     // Write to all modified registers
-//    writeMultipleRegisters( spiHdl, REG_ADDR_STATUS, REG_ADDR_SYS - REG_ADDR_STATUS + 1, initRegisterMap );
-    // Can improve this following part in the future
     regWrite(REG_ADDR_ID, 0x00);
     regWrite(REG_ADDR_STATUS, 0x00);
     regWrite(REG_ADDR_INPMUX, adcChars->inputMuxConfReg);
@@ -494,22 +426,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     regWrite(REG_ADDR_IDACMUX, adcChars->IDACmuxReg);
     regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
     regWrite(REG_ADDR_SYS, SYS_DEFAULT);
-
-    DELAY_US(10);
-//    regWrite(REG_ADDR_ID, 0x00);
-//    regWrite(REG_ADDR_STATUS, 0x00);
-//    regWrite(REG_ADDR_INPMUX, adcChars->inputMuxConfReg);
-//    regWrite(REG_ADDR_PGA, adcChars->pgaReg);
-//    regWrite(REG_ADDR_DATARATE, adcChars->dataRateReg);
-//    regWrite(REG_ADDR_REF, adcChars->refSelReg);
-//    regWrite(REG_ADDR_IDACMAG, adcChars->IDACmagReg);
-//    regWrite(REG_ADDR_IDACMUX, adcChars->IDACmuxReg);
-//    regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
-//    regWrite(REG_ADDR_SYS, SYS_DEFAULT);
-
-//    setChipSelect();
-//
-//    clearChipSelect();
 
     // Read back all registers
 //    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
@@ -523,9 +439,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
     registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
 
-
-
-//    while(1){}
     // Check if all registers were written correctly
     for ( i = REG_ADDR_STATUS; i < REG_ADDR_SYS - REG_ADDR_STATUS + 1; i++ ) {
         if ( i == REG_ADDR_STATUS )         // ignores status register in case POR flag is set
@@ -619,6 +532,52 @@ void stopConversions()
 }
 
 
+///************************************************************************************//**
+// *
+// * @brief stopConversions()
+// *          Transforms float into string.
+// *          Better than sprintf because of memory; Faster than divisions
+// * @param[in]    float * 1000;
+// *
+// * @return      None
+// */
+//void send(unsigned int x){
+//    x = x; // times 1000 to get every number (3 decimals)
+//    // number 1
+//    unsigned char count = 0;
+//    char temperature[6] = {0};
+//    while(x>=10000){ // x may be 0..65535 here
+//        count++;
+//        x-=10000;
+//    }
+////    putchar (0x30+count);   // 0x30 is to transform decimal to ASCII
+//    temperature[0]=count;
+//    count=0;
+//    // number 2
+//    while(x>=1000){ // at this point, x is 9999 at max
+//        count++;
+//        x-=1000;
+//    }
+////    putchar (0x30+count);
+//    // test: putchar ,
+////    putchar(",");
+//    count=0;
+//    // number 3
+//    while(x>=100){  // x is no more than 999 now
+//        count++;
+//        x-=100;
+//    }
+////    putchar (0x30+count);
+//    count=0;
+//    // number 4
+//    while(x>=10){ // and here, x cannot be more than 99
+//        count++;
+//        x-=10;
+//    }
+////    putchar (0x30+count);
+//    // number 5
+////    putchar (0x30+x); // x is 0..9 at this point, everything above has been already subtracted.
+//}
 /************************************************************************************//**
  *
  * @brief readData()
@@ -696,3 +655,17 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
 }
 
 
+void floatToChar(float fTemperature, char* sTemperature){
+    int temp = (int)(fTemperature*1000);
+    sTemperature[0] = (temp/10000) + '0';       // 12345 /10000 =
+
+    sTemperature[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
+
+    sTemperature[2] = '.';
+    sTemperature[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+
+    sTemperature[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+
+    sTemperature[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
+
+    }

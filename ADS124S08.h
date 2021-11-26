@@ -60,8 +60,7 @@
 *          SPISTEA/GPIO61/J2Pin19      <==>         CS
 *          GPIOXINT/GPIO0/J4Pin40      <==>         DRDY
 *                   GPIO1/J4Pin39      <==>         _RESET
-*                   GPIO2/J4Pin38      <==>         START
-*
+*                   GPIO16/J4Pin33     <==>         START
 *********************************************************************************//**
  *                              ADS124S08EVM headers
  *
@@ -673,6 +672,7 @@ inline uint16_t xferWord(uint16_t tx)
     int32_t readConvertedData(uint16_t status[], readMode mode );
     void clearChipSelect(void);
     void setChipSelect(void);
+    void floatToChar(float fTemperature, char* sTemperature);
 
 //    ADS124S08 Datasheet code sequence example
 //

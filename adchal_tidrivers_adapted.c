@@ -81,9 +81,9 @@ void InitSpiADS124S08(void)
 
     // • Choose SPICLK polarity and phase (CLKPOLARITY and CLK_PHASE). SPI mode 1 selected.
     //   Clock polarity (0 == rising, 1 == falling), ADS124S08 operates in SPI mode 1 (CPOL = 0, CPHA = 1)
-    SpiaRegs.SPICCR.bit.CLKPOLARITY = 1;
+    SpiaRegs.SPICCR.bit.CLKPOLARITY = 0;  // 1 and 1 works, also 0 and 0, not cpol 0 and pha 1,
     //   Clock phase (0 == normal, 1 == delayed)
-    SpiaRegs.SPICTL.bit.CLK_PHASE = 1;
+    SpiaRegs.SPICTL.bit.CLK_PHASE = 0;
 
     // • Set the desired baud rate (SPIBRR).
     //   ADS124S08 - Minimum period for SCLK = 100 ns (maximum frequency is 10 MHz)
@@ -246,16 +246,23 @@ void SetupGpioADC(void){
 
     // 2. Setup GPIO for ADC /RESET pin, set it high
     EALLOW;
+    GpioCtrlRegs.GPAGMUX1.bit.GPIO1 = 0;
     GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0;
     GpioCtrlRegs.GPAPUD.bit.GPIO1 = 0;
     GpioCtrlRegs.GPADIR.bit.GPIO1 = 1;
     GpioDataRegs.GPASET.bit.GPIO1 = 1;
 
     // 3. Setup GPIO for ADC START pin, set it low;
-    GpioCtrlRegs.GPAMUX1.bit.GPIO2 = 0;
-    GpioCtrlRegs.GPAPUD.bit.GPIO2 = 0;
-    GpioCtrlRegs.GPADIR.bit.GPIO2 = 1;
-    GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
+//    GpioCtrlRegs.GPAMUX1.bit.GPIO2 = 0;
+//    GpioCtrlRegs.GPAPUD.bit.GPIO2 = 0;
+//    GpioCtrlRegs.GPADIR.bit.GPIO2 = 1;
+//    GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
+
+    GpioCtrlRegs.GPAGMUX2.bit.GPIO16 = 0;
+    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 0;
+    GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO16 = 1;
+    GpioDataRegs.GPACLEAR.bit.GPIO16 = 1;
     EDIS;
 
 }
@@ -382,9 +389,9 @@ void sendWakeup(void)
 void setSTART( bool state )
 {
     if(state){
-    GpioDataRegs.GPASET.bit.GPIO2 = 1;
+    GpioDataRegs.GPASET.bit.GPIO16 = 1;
     } else {
-    GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
+    GpioDataRegs.GPACLEAR.bit.GPIO16 = 1;
     }
     // Minimum START width: 4 tCLKs
     DELAY_US( DELAY_4TCLK );

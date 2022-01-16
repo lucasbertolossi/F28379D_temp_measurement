@@ -325,7 +325,7 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
     SetupGpioADC();         // Configures GPIO for pins START and /RESET
                             // Configure external interruption for DRDY
 
-    // Start up the ADC
+    // Start up the ADC     // QUEBRAR AQUI
     status = adcStartupRoutine(adcChars);
 
     /* DRDY interrupt configuration */

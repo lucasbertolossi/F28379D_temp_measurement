@@ -67,7 +67,7 @@ SECTIONS
 //   .ebss            : > RAMLS5,    PAGE = 1
    .ebss            : >> RAMLS5 | RAMGS5,    PAGE = 1
    //.econst          : > RAMLS5,    PAGE = 1
-   .econst          : >> RAMLS5 | RAMGS5,    PAGE = 1
+   .econst          : >> RAMLS5 | RAMGS4 | RAMGS5,    PAGE = 1
    .esysmem         : > RAMLS5,    PAGE = 1
    Filter_RegsFile  : > RAMGS0,	   PAGE = 1
 

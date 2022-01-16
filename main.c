@@ -55,22 +55,35 @@
 #include "F28379D_lcd.h"
 #include "ADS124S08.h"
 #include "adchal_tidrivers_adapted.h"
+#include <math.h>
 //#include "pin_map.h"
 //#include "device.h"
+
+/* RTD related includes */
+#include "inc/rtd.h"
+#include "inc/rtd_tables.h"
+
 
 //****************************************************************************
 //
 // Global
 //
 //****************************************************************************
+// Global parameter passing to interrupts must occur through global memory
+char* sTemperature = "";
+float rtdTemp = 0;
 
-//volatile uint32_t xINT1Count;
-volatile uint16_t dataw;
-// Debug messages to display in LCD
-char message[] = "F28379D";
+
+volatile uint16_t xINT1Count;
+volatile uint16_t timer0Count;
 
 bool flag_nDRDY_INTERRUPT = false;
 
+typedef enum RTDExampleDef{
+    RTD_2_Wire_Fig15,     // 2-Wire RTD example using ADS124S08 EVM, User's Guide Figure 15
+    RTD_3_Wire_Fig14,     // 3-Wire RTD example using ADS124S08 EVM, User's Guide Figure 14
+    RTD_4_Wire_Fig16,     // 4-Wire RTD example using ADS124S08 EVM, User's Guide Figure 16
+} RTD_Example;
 //
 // Function Prototypes
 //
@@ -83,7 +96,9 @@ __interrupt void cpu_timer0_isr(void);
 //
 int main(void)
 {
-//    Uint32 xINT1Count;
+//    bool bAlreadyInitialized = false;       // Initializes only once
+
+
 
 //
 // Initialize System Control:
@@ -162,7 +177,8 @@ int main(void)
 //
 // Clear the counter
 //
-//    xINT1Count = 0;       // Count XINT1 interrupts
+    xINT1Count = 0;       // Count XINT1 interrupts
+    timer0Count = 0;
 
 
 //
@@ -189,16 +205,79 @@ int main(void)
     DisplayLCD(1, "Initializing");
     DisplayLCD(2, "Program");
 
-    // Initializes SPI and ADS124S08 communication
-    readRTDtemp();
 
 // - Test with global chop on
 // - Test with CRC and status byte
 //   Perform offset calibration before system gain calibration
 //
+    // Initializes SPI and ADS124S08 communication
+
+    RTD_Set     *rtdSet = NULL;
+    RTD_Type    rtdType = Pt;
+    RTD_Example rtdExample = RTD_4_Wire_Fig16;
+    float       rtdRes, rtdTemp;
+    ADCchar_Set adcChars;
+    uint16_t     status;
+    char errorTimeOut[] = "Timeout on conv.";
+    char errorSpiConfig[] = "Error in SPI";
+
+//    switch ( rtdType ) {
+//        case Pt:
+    rtdSet = &PT100_RTD;
+//            break;
+//    }
+
+//    switch ( rtdExample ) {
+//        case RTD_4_Wire_Fig16:
+    adcChars.inputMuxConfReg = RTD_FOUR_WIRE_INPUT_MUX;
+    adcChars.pgaReg          = RTD_FOUR_WIRE_PGA;
+    adcChars.dataRateReg     = RTD_FOUR_WIRE_DATARATE;
+    adcChars.refSelReg       = RTD_FOUR_WIRE_REF_SEL;
+    adcChars.IDACmagReg      = RTD_FOUR_WIRE_IDACMAG;
+    adcChars.IDACmuxReg      = RTD_FOUR_WIRE_IDACMUX;
+    adcChars.Vref            = RTD_FOUR_WIRE_INT_VREF;
+    rtdSet->Rref             = RTD_FOUR_WIRE_REF_RES;
+    rtdSet->wiring           = Four_Wire_High_Side_Ref;
+//            break;
+//    }
+    adcChars.VBIASReg = RTD_VBIAS;
+
+    if ( !InitADCPeripherals(&adcChars) ) {
+        DisplayLCD(1, errorSpiConfig);
+        DisplayLCD(2, "");
+
+        while (1);
+    }
 
     while(1)
     {
+
+//    rtdTemp = readRTDtemp(&bAlreadyInitialized);
+
+    if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
+        adcChars.adcValue1 = readConvertedData( &status, COMMAND );
+
+        // Convert ADC values RTD resistance
+        rtdRes = Convert_Code2RTD_Resistance( &adcChars, rtdSet  );
+
+        // Convert RTD resistance to temperature and linearize
+        rtdTemp = RTD_Linearization( rtdSet, rtdRes );
+
+        if ( isnan(rtdTemp) ) {
+            DisplayLCD(1, "Temp: NaN");
+            DisplayLCD(2, "");
+        }
+//        } else {
+//            floatToChar(rtdTemp, sTemperature);
+//            DisplayLCD(1, sTemperature);
+//        }
+    } else {
+        DisplayLCD(1, errorTimeOut);
+        DisplayLCD(2, "");
+        while (1);
+    }
+
+
 
     }
 
@@ -207,7 +286,7 @@ int main(void)
 // External interrupt XINT1 indicates availability of new conversion data.
 __interrupt void xint1_isr(void)
 {
-//    xINT1Count++; // Watch variable - checking if /DRDY is going low after each conversion
+    xINT1Count++; // Watch variable - checking if /DRDY is going low after each conversion
 
     /* Set nDRDY flag to true */
     flag_nDRDY_INTERRUPT = true;
@@ -224,12 +303,16 @@ __interrupt void xint1_isr(void)
 //
 __interrupt void cpu_timer0_isr(void)
 {
-   CpuTimer0.InterruptCount++;
+    timer0Count++;
+
+    floatToChar(rtdTemp,sTemperature);
+    DisplayLCD(1, sTemperature);
+
 
    //
    // Acknowledge this interrupt to receive more interrupts from group 1
    //
-   PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
 //
@@ -237,7 +320,7 @@ __interrupt void cpu_timer0_isr(void)
 //
 //__interrupt void cpu_timer1_isr(void)
 //{
-//   CpuTimer1.InterruptCount++;
+//    CpuTimer1.InterruptCount++;
 //}
 
 
@@ -247,9 +330,9 @@ __interrupt void cpu_timer0_isr(void)
 //
 //__interrupt void cpu_timer2_isr(void)
 //{
-//   CpuTimer2.InterruptCount++;
+//    CpuTimer2.InterruptCount++;
 //}
-
+//
 
 
 //

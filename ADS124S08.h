@@ -47,8 +47,10 @@
 /* Start definitions */
 #ifndef ADS124S08_H_
 #define ADS124S08_H_
-#include "F28x_Project.h"
 #include <stdint.h>
+#include <stdbool.h>
+#include "F28x_Project.h"
+
 
 /********************************************************************************//**
 *                               Hardware connections
@@ -126,6 +128,10 @@ typedef struct ADCcharDef {
     int32_t      adcValue1;         // ADC conversion result provided as sign extended 2's complement (first one)
     int32_t      adcValue2;         // ADC conversion result provided as sign extended 2's complement (second one)
 } ADCchar_Set;
+
+
+
+
 /********************************************************************************//**
  *
  * @name Constants for ADS124S08
@@ -660,11 +666,12 @@ inline uint16_t xferWord(uint16_t tx)
     rx = SpiaRegs.SPIRXBUF;
     return rx;
 }
+
 //    Function prototypes
     uint16_t getRegisterValue( uint16_t address );
     void regWrite(uint16_t regnum, uint16_t data);
     uint16_t regRead(uint16_t regnum);
-    void readRTDtemp(void);
+//    float readRTDtemp(bool *bAlreadyInitialized);
     bool adcStartupRoutine(ADCchar_Set *adcChars);
     void restoreRegisterDefaults(void);
     void startConversions(void);

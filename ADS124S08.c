@@ -55,24 +55,19 @@
  * Software to use ADS124S08EVM with F28379D
  *
  */
-
+#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "F28x_Project.h"
 #include <math.h>
 #include "ADS124S08.h"
 #include "adchal_tidrivers_adapted.h"
 #include "F28379D_lcd.h"
-#include <stdio.h>
 
 /* RTD related includes */
-#include "inc/rtd.h"
-#include "inc/rtd_tables.h"
+//#include "inc/rtd.h"
+//#include "inc/rtd_tables.h"
 //#include "device.h"
-typedef enum RTDExampleDef{
-    RTD_2_Wire_Fig15,     // 2-Wire RTD example using ADS124S08 EVM, User's Guide Figure 15
-    RTD_3_Wire_Fig14,     // 3-Wire RTD example using ADS124S08 EVM, User's Guide Figure 14
-    RTD_4_Wire_Fig16,     // 4-Wire RTD example using ADS124S08 EVM, User's Guide Figure 16
-} RTD_Example;
 
 #define td_CSSC 1   // Delay 1 us first SCLK rising edge after CS falling edge, min 20 ns
 
@@ -132,7 +127,6 @@ void regWrite(uint16_t regnum, uint16_t data)
     uint16_t iDataTx[3];
     uint16_t iDataRx[3] = { 0xffff, 0xffff, 0xffff };
     uint16_t i;
-    uint16_t junk;
     iDataTx[0] = (0x0000 | (OPCODE_WREG | (regnum & 0x1f)));
     iDataTx[1] = 0x0000;
     iDataTx[2] = data;
@@ -207,109 +201,74 @@ uint16_t regRead(uint16_t regnum)
 //    return iData ;
 //}
 
-void readRTDtemp(void){
-    RTD_Set     *rtdSet = NULL;
-    RTD_Type    rtdType = Pt;
-    RTD_Example rtdExample = RTD_4_Wire_Fig16;
-    float       rtdRes, rtdTemp;
-    ADCchar_Set adcChars;
-    uint16_t     status;
-    char errorTimeOut[] = "Timeout on conv.";
-    char errorSpiConfig[] = "Error in SPI";
-    char* sTemperature;
-
-
-    switch ( rtdType ) {
-        case Pt:
-            rtdSet = &PT100_RTD;
-            break;
-    }
-
-    switch ( rtdExample ) {
-//        case RTD_3_Wire_Fig14:
-//            adcChars.inputMuxConfReg = RTD_THREE_WIRE_INPUT_MUX;
-//            adcChars.pgaReg          = RTD_THREE_WIRE_PGA;
-//            adcChars.dataRateReg     = RTD_THREE_WIRE_DATARATE;
-//            adcChars.refSelReg       = RTD_THREE_WIRE_REF_SEL;
-//            adcChars.IDACmagReg      = RTD_THREE_WIRE_IDACMAG;
-//            adcChars.IDACmuxReg      = RTD_THREE_WIRE_IDACMUX;
-//            adcChars.Vref            = RTD_THREE_WIRE_EXT_VREF;
-//            rtdSet->Rref             = RTD_THREE_WIRE_REF_RES;
-//            rtdSet->wiring           = Three_Wire_High_Side_Ref_Two_IDAC;
-//            break;
-        case RTD_4_Wire_Fig16:
-            adcChars.inputMuxConfReg = RTD_FOUR_WIRE_INPUT_MUX;
-            adcChars.pgaReg          = RTD_FOUR_WIRE_PGA;
-            adcChars.dataRateReg     = RTD_FOUR_WIRE_DATARATE;
-            adcChars.refSelReg       = RTD_FOUR_WIRE_REF_SEL;
-            adcChars.IDACmagReg      = RTD_FOUR_WIRE_IDACMAG;
-            adcChars.IDACmuxReg      = RTD_FOUR_WIRE_IDACMUX;
-            adcChars.Vref            = RTD_FOUR_WIRE_INT_VREF;
-            rtdSet->Rref             = RTD_FOUR_WIRE_REF_RES;
-            rtdSet->wiring           = Four_Wire_High_Side_Ref;
-            break;
-    }
-    adcChars.VBIASReg = RTD_VBIAS;
-
-    if ( !InitADCPeripherals(&adcChars) ) {
-        DisplayLCD(1, errorSpiConfig);
+//float readRTDtemp(bool *bAlreadyInitialized){
+//
+//    if(*bAlreadyInitialized==false){
+//        static RTD_Set     *rtdSet = NULL;
+//        static RTD_Type    rtdType = Pt;
+//        static RTD_Example rtdExample = RTD_4_Wire_Fig16;
+//        static float       rtdRes, rtdTemp;
+//        static ADCchar_Set adcChars;
+//        static uint16_t     status;
+//        static char errorTimeOut[] = "Timeout on conv.";
+//        static char errorSpiConfig[] = "Error in SPI";
+//
+//        switch ( rtdType ) {
+//            case Pt:
+//                rtdSet = &PT100_RTD;
+//                break;
+//        }
+//
+//        switch ( rtdExample ) {
+//            case RTD_4_Wire_Fig16:
+//                adcChars.inputMuxConfReg = RTD_FOUR_WIRE_INPUT_MUX;
+//                adcChars.pgaReg          = RTD_FOUR_WIRE_PGA;
+//                adcChars.dataRateReg     = RTD_FOUR_WIRE_DATARATE;
+//                adcChars.refSelReg       = RTD_FOUR_WIRE_REF_SEL;
+//                adcChars.IDACmagReg      = RTD_FOUR_WIRE_IDACMAG;
+//                adcChars.IDACmuxReg      = RTD_FOUR_WIRE_IDACMUX;
+//                adcChars.Vref            = RTD_FOUR_WIRE_INT_VREF;
+//                rtdSet->Rref             = RTD_FOUR_WIRE_REF_RES;
+//                rtdSet->wiring           = Four_Wire_High_Side_Ref;
+//                break;
+//        }
+//        adcChars.VBIASReg = RTD_VBIAS;
+//
+//        if ( !InitADCPeripherals(&adcChars) ) {
+//            DisplayLCD(1, errorSpiConfig);
+//            DisplayLCD(2, "");
+//
+//            while (1);
+//        }
+//        *bAlreadyInitialized = true;
+//    }
+//
+//    if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
+//        adcChars.adcValue1 = readConvertedData( &status, COMMAND );
+//
+//        // Convert ADC values RTD resistance
+//        rtdRes = Convert_Code2RTD_Resistance( &adcChars, rtdSet  );
+//
+//        // Convert RTD resistance to temperature and linearize
+//        rtdTemp = RTD_Linearization( rtdSet, rtdRes );
+//
+//        if ( isnan(rtdTemp) ) {
+//            DisplayLCD(1, "Temp: NaN");
+//            DisplayLCD(2, "");
+//        }
+////        } else {
+////            floatToChar(rtdTemp, sTemperature);
+////            DisplayLCD(1, sTemperature);
+////        }
+//    } else {
+//        DisplayLCD(1, errorTimeOut);
 //        DisplayLCD(2, "");
-
-        while (1);
-    }
-
-    do {
-        if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
-            adcChars.adcValue1 = readConvertedData( &status, COMMAND );
-            // For 3-wire with one IDAC, multiple readings are needed. So reconfigure ADC to read 2nd channel
-//            if ( rtdSet->wiring == Three_Wire_High_Side_Ref_One_IDAC || rtdSet->wiring == Three_Wire_Low_Side_Ref_One_IDAC ) {
-//                adcChars2.inputMuxConfReg = RTD_THREE_WIRE_INPUT_MUX2;
-//                adcChars2.pgaReg          = RTD_THREE_WIRE_PGA;
-//                adcChars2.dataRateReg     = RTD_THREE_WIRE_DATARATE;
-//                adcChars2.refSelReg       = RTD_THREE_WIRE_REF_SEL;
-//                adcChars2.IDACmagReg      = RTD_THREE_WIRE_IDACMAG;
-//                adcChars2.IDACmuxReg      = RTD_THREE_WIRE_IDACMUX;
-//                adcChars2.Vref            = RTD_THREE_WIRE_EXT_VREF;
-//                adcChars2.VBIASReg        = VBIAS_DEFAULT;
+//        while (1);
+//    }
 //
 //
-//                if ( !ReconfigureADC( &adcChars2, spiHdl ) ) {
-//                    Display_printf( displayHdl, 0, 0, "Error reconfiguring ADC\n" );
-//                    while (1);
-//                }
-//                // Store second channel value into previous ADC structure as adcValue2
-//                if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
-//                   adcChars.adcValue2 = readConvertedData( spiHdl, &status, COMMAND );
-//                } else {
-//                    Display_printf( displayHdl, 0, 0, "Timeout on conversion\n" );
-//                    while (1);
-//                }
-//            }
-            // Convert ADC values RTD resistance
-            rtdRes = Convert_Code2RTD_Resistance( &adcChars, rtdSet  );
-            // Convert RTD resistance to temperature and linearize
-            rtdTemp = RTD_Linearization( rtdSet, rtdRes );
-//            Display_printf( displayHdl, 0, 0, "ADC conversion result 1: %i\n", adcChars.adcValue1 );
-//            if ( rtdSet->wiring == Three_Wire_High_Side_Ref_One_IDAC || rtdSet->wiring == Three_Wire_Low_Side_Ref_One_IDAC ) {
-//                Display_printf( displayHdl, 0, 0, "ADC conversion result 2: %i\n", adcChars.adcValue2 );
-//            }
-
-            if ( isnan(rtdTemp) ) {
-                DisplayLCD(1, "Temp: NaN");
-                DisplayLCD(2, "");
-            } else {
-                floatToChar(rtdTemp, sTemperature);
-                DisplayLCD(1, sTemperature);
-            }
-        } else {
-            DisplayLCD(1, errorTimeOut);
-            DisplayLCD(2, "");
-            while (1);
-        }
-
-    } while (1);
-
-}
+//    return rtdTemp;
+//}
 
 /************************************************************************************//**
  *

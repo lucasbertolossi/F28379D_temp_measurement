@@ -98,8 +98,6 @@ int main(void)
 {
 //    bool bAlreadyInitialized = false;       // Initializes only once
 
-
-
 //
 // Initialize System Control:
 // PLL, WatchDog, enable Peripheral Clocks
@@ -202,8 +200,8 @@ int main(void)
 //
     Gpio_Setup_LCD();       // Enable GPIO for LCD as output pins on GPIO4 - GPIO11, GPIO14 - GPIO15;
     InitializeLCD();        // Initialize LCD;
-    DisplayLCD(1, "Initializing");
-    DisplayLCD(2, "Program");
+//    DisplayLCD(1, "Initializing");
+//    DisplayLCD(2, "Program");
 
 
 // - Test with global chop on
@@ -242,6 +240,7 @@ int main(void)
 //    }
     adcChars.VBIASReg = RTD_VBIAS;
 
+    // Initialize ADC peripherals, program ADC settings and check communication
     if ( !InitADCPeripherals(&adcChars) ) {
         DisplayLCD(1, errorSpiConfig);
         DisplayLCD(2, "");
@@ -249,12 +248,15 @@ int main(void)
         while (1);
     }
 
+//    DisplayLCD(1, "                ");
+//    DisplayLCD(2, "                ");
+    // MAIN LOOP
     while(1)
     {
 
-//    rtdTemp = readRTDtemp(&bAlreadyInitialized);
 
     if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
+
         adcChars.adcValue1 = readConvertedData( &status, COMMAND );
 
         // Convert ADC values RTD resistance
@@ -267,10 +269,10 @@ int main(void)
             DisplayLCD(1, "Temp: NaN");
             DisplayLCD(2, "");
         }
-//        } else {
-//            floatToChar(rtdTemp, sTemperature);
-//            DisplayLCD(1, sTemperature);
-//        }
+        else {
+            floatToChar(rtdTemp, sTemperature);
+            DisplayLCD(1, sTemperature);
+        }
     } else {
         DisplayLCD(1, errorTimeOut);
         DisplayLCD(2, "");
@@ -282,6 +284,7 @@ int main(void)
     }
 
 }
+
 
 // External interrupt XINT1 indicates availability of new conversion data.
 __interrupt void xint1_isr(void)
@@ -297,6 +300,7 @@ __interrupt void xint1_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 
 }
+
 
 //
 // cpu_timer0_isr - CPU Timer0 ISR with interrupt counter
@@ -314,6 +318,7 @@ __interrupt void cpu_timer0_isr(void)
    //
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
+
 
 //
 // cpu_timer1_isr - CPU Timer1 ISR

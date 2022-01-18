@@ -308,7 +308,7 @@ uint16_t spi_xmit(uint16_t a)
 bool InitADCPeripherals( ADCchar_Set *adcChars)
 {
     bool            status;
-
+    uint16_t rx_tss;    // troubleshooting variable
 //    *spiHdl = SPI_open( ADC_SPI_0, &spiParams );
 //    if (*spiHdl == NULL) {
 //        Display_printf( displayHdl, 0, 0, "Error initializing master SPI\n" );
@@ -332,7 +332,31 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
 //    GPIO_clearInt( ADC_DRDY );
 //    GPIO_enableInt( ADC_DRDY );                 // enable Interrupt
 
+    clearChipSelect();
+
     startConversions();                           // Start Conversions
+
+
+    // Self offset calibration (needs to be in conversion mode)
+    // Samples to be averaged are chosen using the
+    // CAL_SAMP[1:0] bits in System control register (09h)
+    rx_tss = spi_xmit(OPCODE_SFOCAL);
+
+    if ( waitForDRDYHtoL( TIMEOUT_COUNTER_CAL ) ) {
+
+    } else {
+        DisplayLCD(1, "Timeout on calib");
+        DisplayLCD(2, "");
+        while (1);
+    }
+
+    setSTART(LOW);
+    DELAY_US(24 * 1000000 / ADS124S08_FCLK);
+
+    setSTART(HIGH);
+    DELAY_US(28 * 1000000 / ADS124S08_FCLK);
+
+
 
     return( status );
 }
@@ -395,6 +419,24 @@ void setSTART( bool state )
     }
     // Minimum START width: 4 tCLKs
     DELAY_US( DELAY_4TCLK );
+}
+
+
+/************************************************************************************//**
+ *
+ * @brief sendSTART()
+ *            Sends START Command through SPI
+ *
+ * @param[in]   spiHdl    SPI_Handle pointer for TI Drivers
+ *
+ * @return      None
+ */
+void sendSTART(void)
+{
+    uint16_t dataTx = OPCODE_START;
+
+    // Send START Command
+    spi_xmit(dataTx);
 }
 
 

@@ -165,6 +165,7 @@ extern bool converting;
 #define DELAY_4096TCLK  (uint32_t) (4096.0 * 1000000 / ADS124S08_FCLK )         // After RESET
 #define DELAY_2p2MS     (uint32_t) (0.0022 * 1000000 / ADS124S08_FCLK )         // After power-up
 #define TIMEOUT_COUNTER 10000
+#define TIMEOUT_COUNTER_CAL 50000
 
 // Set SPIBRR to 11 so that clock will meet SPI slave's requirements
 // LSPCLKDIV = 4 (default)

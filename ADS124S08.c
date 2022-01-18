@@ -285,6 +285,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     uint16_t initRegisterMap[NUM_REGISTERS] = { 0 };   // adapted from 8 bits to 16
     uint16_t status;                                // adapted from 8 bits to 16
     uint16_t i = 0;
+    uint16_t dummy = 0x00;
 
     // Provide additional delay time for power supply settling
     DELAY_US( DELAY_2p2MS );
@@ -298,55 +299,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     DELAY_US(1000*5);
     setChipSelect();
 
-    // Ensure internal register array is initialized
-    restoreRegisterDefaults();
-//
-//
-//    // Write all registers
-//    uint16_t countt = 10;    // number of registers to read
-//    uint16_t uiWriteInitialRegistersADC[10] = {0x00, 0x00, 0x24, 0x09, 0x14, 0x06, 0x07, 0xF5, 0x00, 0x10 };
-//    uint16_t junkk;
-//    uint16_t uiDataInitialTx[2];
-//
-//    // clear junk
-//    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
-//        junkk = SpiaRegs.SPIRXBUF;
-//    }
-//    junkk = SpiaRegs.SPIRXBUF;
-//
-//    uiDataInitialTx[0] = OPCODE_WREG + (0x00 & 0x1f);
-//    uiDataInitialTx[1] = countt-1;
-//
-//    clearChipSelect();
-//    xferWord(uiDataInitialTx[0]);
-//    xferWord(uiDataInitialTx[1]);
-//    for(i = 0; i < countt; i++)
-//    {
-//        xferWord(uiWriteInitialRegistersADC[i]);
-//    }
-//    setChipSelect();
-//
-//    // Read back all registers
-//    uint16_t count = 10;    // number of registers to read
-//    uint16_t uiInitialRegistersADC[10] = {0};
-//    uint16_t uiDataTx[2];
-//    uint16_t junk;
-//    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
-//        junk = SpiaRegs.SPIRXBUF;
-//    }
-//    junk = SpiaRegs.SPIRXBUF;
-//    uiDataTx[0] = OPCODE_RREG + (0x00 & 0x1f);
-//    uiDataTx[1] = count-1;
-//    clearChipSelect();
-//    xferWord(uiDataTx[0]);
-//    xferWord(uiDataTx[1]);
-//    for(i = 0; i < count; i++)
-//    {
-//        uiInitialRegistersADC[i] = xferWord(0);
-//    }
-//    setChipSelect();
-//
-// TEST
     status = regRead(REG_ADDR_STATUS);
     if ( (status & ADS_nRDY_MASK) ) {
         return( false );                      // Device not ready
@@ -364,7 +316,8 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     initRegisterMap[REG_ADDR_IDACMAG] = adcChars->IDACmagReg;
     initRegisterMap[REG_ADDR_IDACMUX] = adcChars->IDACmuxReg;
     initRegisterMap[REG_ADDR_VBIAS]   = adcChars->VBIASReg;
-    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT;
+//    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT;
+    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT | ADS_CALSAMPLE_16;
 
     // Initialize ADC Characteristics
     adcChars->resolution     = ADS124S08_BITRES;
@@ -384,7 +337,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     regWrite(REG_ADDR_IDACMAG, adcChars->IDACmagReg);
     regWrite(REG_ADDR_IDACMUX, adcChars->IDACmuxReg);
     regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
-    regWrite(REG_ADDR_SYS, SYS_DEFAULT);
+    regWrite(REG_ADDR_SYS, SYS_DEFAULT | ADS_CALSAMPLE_16);
 
     // Read back all registers
 //    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
@@ -397,6 +350,8 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     registerMap[REG_ADDR_IDACMUX] = regRead(REG_ADDR_IDACMUX);
     registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
     registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
+    registerMap[REG_ADDR_FSCAL2] = regRead(REG_ADDR_FSCAL2);
+    dummy = regRead(REG_ADDR_FSCAL2);
 
     // Check if all registers were written correctly
     for ( i = REG_ADDR_STATUS; i < REG_ADDR_SYS - REG_ADDR_STATUS + 1; i++ ) {
@@ -466,7 +421,7 @@ void startConversions(void)
      /* Begin continuous conversions */
     setSTART( HIGH );
 #else
-    sendSTART( spiHdl );
+    sendSTART();
 #endif
 }
 

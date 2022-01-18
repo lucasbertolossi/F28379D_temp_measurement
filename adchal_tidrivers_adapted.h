@@ -78,6 +78,7 @@ bool InitADCPeripherals( ADCchar_Set *adcChars);
 void toggleRESET( void );
 void sendWakeup(void);
 void setSTART( bool state );
+void sendSTART(void);
 void sendSTOP(void);
 bool waitForDRDYHtoL( uint32_t timeout_ms );
 

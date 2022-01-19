@@ -316,8 +316,8 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     initRegisterMap[REG_ADDR_IDACMAG] = adcChars->IDACmagReg;
     initRegisterMap[REG_ADDR_IDACMUX] = adcChars->IDACmuxReg;
     initRegisterMap[REG_ADDR_VBIAS]   = adcChars->VBIASReg;
-//    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT;
-    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT | ADS_CALSAMPLE_16;
+    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT;
+//    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT | ADS_CALSAMPLE_16; // sample 16 times for calibration (calibration works when global chopping is off)
 
     // Initialize ADC Characteristics
     adcChars->resolution     = ADS124S08_BITRES;
@@ -337,7 +337,8 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     regWrite(REG_ADDR_IDACMAG, adcChars->IDACmagReg);
     regWrite(REG_ADDR_IDACMUX, adcChars->IDACmuxReg);
     regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
-    regWrite(REG_ADDR_SYS, SYS_DEFAULT | ADS_CALSAMPLE_16);
+    regWrite(REG_ADDR_SYS, SYS_DEFAULT);
+//    regWrite(REG_ADDR_SYS, SYS_DEFAULT | ADS_CALSAMPLE_16);
 
     // Read back all registers
 //    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );

@@ -97,7 +97,10 @@
 #define RTD_VBIAS               VBIAS_DEFAULT
 #define RTD_FOUR_WIRE_INPUT_MUX ADS_P_AIN2 | ADS_N_AIN4;                                    // MuxP = Ain2, MuxN = Ain4
 #define RTD_FOUR_WIRE_PGA       ADS_PGA_ENABLED | ADS_GAIN_2;                               // PGA enabled, PGA gain = 2X
-#define RTD_FOUR_WIRE_DATARATE  ADS_CONVMODE_CONT | ADS_FILTERTYPE_LL | ADS_DR_20;          // Continuous conversion, low latency filter, 20 SPS rate
+//#define RTD_FOUR_WIRE_DATARATE  ADS_CONVMODE_CONT | ADS_FILTERTYPE_LL | ADS_DR_20;          // Continuous conversion, low latency filter, 20 SPS rate
+//#define RTD_FOUR_WIRE_DATARATE  ADS_GLOBALCHOP | ADS_CONVMODE_CONT | ADS_FILTERTYPE_LL | ADS_DR_20;          // Global chop on, Continuous conversion, low latency filter, 20 SPS rate 1001 0100 0x94h
+//#define RTD_FOUR_WIRE_DATARATE  (ADS_GLOBALCHOP | ADS_CONVMODE_CONT | ADS_DR_20) & 0xEF ;          // Global chop on, Continuous conversion, Sinc3 filter, 20 SPS rate 1000 0100 0x84h
+#define RTD_FOUR_WIRE_DATARATE  (ADS_GLOBALCHOP | ADS_CONVMODE_CONT | ADS_DR_2_5) & 0xEF ;          // Global chop on, Continuous conversion, Sinc3 filter, 2.5 SPS rate 1000 0000 0x80h
 #define RTD_FOUR_WIRE_REF_SEL   ADS_REFN_BYP_ENABLE | ADS_REFSEL_P1 | ADS_REFINT_ON_ALWAYS; // RefN Enabled, RefP1 and RefN1 selected, Int Ref always on
 #define RTD_FOUR_WIRE_IDACMAG   ADS_IDACMAG_1000;                                           // IDAC Mag 1 mA
 #define RTD_FOUR_WIRE_IDACMUX   ADS_IDAC2_OFF | ADS_IDAC1_A5;                               // IDAC Mux = AIN5, IDAC2 off

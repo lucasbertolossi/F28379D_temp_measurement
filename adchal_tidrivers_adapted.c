@@ -336,25 +336,25 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
 
     startConversions();                           // Start Conversions
 
-
-    // Self offset calibration (needs to be in conversion mode)
+    DELAY_US(115*1000);     // first data conversion period for global chop mode at 20 SPS table 18
+    // Self offset calibration (needs to be in conversion mode) - disabled due to use of global chopping
     // Samples to be averaged are chosen using the
     // CAL_SAMP[1:0] bits in System control register (09h)
-    rx_tss = spi_xmit(OPCODE_SFOCAL);
-
-    if ( waitForDRDYHtoL( TIMEOUT_COUNTER_CAL ) ) {
-
-    } else {
-        DisplayLCD(1, "Timeout on calib");
-        DisplayLCD(2, "");
-        while (1);
-    }
-
-    setSTART(LOW);
-    DELAY_US(24 * 1000000 / ADS124S08_FCLK);
-
-    setSTART(HIGH);
-    DELAY_US(28 * 1000000 / ADS124S08_FCLK);
+//    rx_tss = spi_xmit(OPCODE_SFOCAL);
+//
+//    if ( waitForDRDYHtoL( TIMEOUT_COUNTER_CAL ) ) {
+//
+//    } else {
+//        DisplayLCD(1, "Timeout on calib");
+//        DisplayLCD(2, "");
+//        while (1);
+//    }
+//
+//    setSTART(LOW);
+//    DELAY_US(24 * 1000000 / ADS124S08_FCLK);
+//
+//    setSTART(HIGH);
+//    DELAY_US(28 * 1000000 / ADS124S08_FCLK);
 
 
 

@@ -75,7 +75,6 @@ float rtdTemp = 0;
 
 
 volatile uint16_t xINT1Count;
-volatile uint16_t timer0Count;
 
 bool flag_nDRDY_INTERRUPT = false;
 
@@ -95,7 +94,7 @@ __interrupt void cpu_timer0_isr(void);
 // Main
 //
 int main(void)
-{
+,{
 //    bool bAlreadyInitialized = false;       // Initializes only once
 
 //
@@ -176,18 +175,22 @@ int main(void)
 // Clear the counter
 //
     xINT1Count = 0;       // Count XINT1 interrupts
-    timer0Count = 0;
 
 
 //
-// Enable XINT1 in the PIE: Group 1 interrupt 4
 // Enable INT1 which is connected to WAKEINT:
 //
-    PieCtrlRegs.PIEIER1.bit.INTx4 = 1;          // Enable PIE Group 1 INT4
-    IER |= M_INT1;                              // Enable CPU INT1 (timer 0)
+
+    IER |= M_INT1;                            // Enable CPU INT1 (timer 0)
 //    IER |= M_INT13;                         // Enable CPU INT13 (timer 1)
 //    IER |= M_INT14;                         // Enable CPU INT14 (timer 2)
 
+//
+// Enable XINT1 in the PIE: Group 1 interrupt 4
+// Enable TINT0 in the PIE: Group 1 interrupt 7
+//
+    PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
 
 //
 // Enable global Interrupts and higher priority real-time debug events:
@@ -266,7 +269,8 @@ int main(void)
         rtdTemp = RTD_Linearization( rtdSet, rtdRes );
 
         if ( isnan(rtdTemp) ) {
-            DisplayLCD(1, "Temp: NaN");
+            DisplayLCD(1, "NaN");
+            DELAY_US(1000);
             DisplayLCD(2, "");
         }
         else {
@@ -307,10 +311,10 @@ __interrupt void xint1_isr(void)
 //
 __interrupt void cpu_timer0_isr(void)
 {
-    timer0Count++;
+    CpuTimer0.InterruptCount++;
 
-    floatToChar(rtdTemp,sTemperature);
-    DisplayLCD(1, sTemperature);
+//    floatToChar(rtdTemp,sTemperature);
+//    DisplayLCD(1, sTemperature);
 
 
    //

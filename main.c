@@ -56,6 +56,7 @@
 #include "ADS124S08.h"
 #include "adchal_tidrivers_adapted.h"
 #include <math.h>
+#include "Peripheral_Setup.h"
 //#include "pin_map.h"
 //#include "device.h"
 
@@ -63,16 +64,35 @@
 #include "inc/rtd.h"
 #include "inc/rtd_tables.h"
 
-
 //****************************************************************************
 //
 // Global
 //
 //****************************************************************************
+typedef struct
+{
+    volatile struct EPWM_REGS *EPwmRegHandle;
+    Uint16 EPwm_CMPA_Direction;
+    Uint16 EPwm_CMPB_Direction;
+    Uint16 EPwmTimerIntCount;
+    Uint16 EPwmMaxCMPA;
+    Uint16 EPwmMinCMPA;
+    Uint16 EPwmMaxCMPB;
+    Uint16 EPwmMinCMPB;
+}EPWM_INFO;
+
+EPWM_INFO epwm2_info;
+
+
 // Global parameter passing to interrupts must occur through global memory
 char* sTemperature = "";
-float rtdTemp = 0;
+char* sRtdRes = "";
 
+float rtdTemp = 0;
+float plot1[1024];              // used for plotting temperature
+float *pTemperature = &rtdTemp; // used for plotting temperature
+
+uint32_t index = 0;
 
 volatile uint16_t xINT1Count;
 
@@ -86,16 +106,19 @@ typedef enum RTDExampleDef{
 //
 // Function Prototypes
 //
+__interrupt void epwm2_isr(void);
 __interrupt void xint1_isr(void);
 __interrupt void cpu_timer0_isr(void);
 //__interrupt void cpu_timer1_isr(void);
 //__interrupt void cpu_timer2_isr(void);
+void update_compare(EPWM_INFO *epwm_info);
+
+
 //
 // Main
 //
 int main(void)
-,{
-//    bool bAlreadyInitialized = false;       // Initializes only once
+{
 
 //
 // Initialize System Control:
@@ -103,6 +126,13 @@ int main(void)
 // This example function is found in the F2837xD_SysCtrl.c file.
 //
    InitSysCtrl();
+
+
+//
+// Initialize PWM GPIO
+//
+   Setup_ePWM_Gpio();
+
 
 //
 // Clear all interrupts and initialize PIE vector table:
@@ -142,6 +172,7 @@ int main(void)
     PieVectTable.TIMER0_INT = &cpu_timer0_isr;
 //    PieVectTable.TIMER1_INT = &cpu_timer1_isr;
 //    PieVectTable.TIMER2_INT = &cpu_timer2_isr;
+    PieVectTable.EPWM2_INT = &epwm2_isr;
     EDIS;
 
 //
@@ -170,7 +201,6 @@ int main(void)
 //    CpuTimer1Regs.TCR.all = 0x4000;
 //    CpuTimer2Regs.TCR.all = 0x4000;
 
-
 //
 // Clear the counter
 //
@@ -181,22 +211,30 @@ int main(void)
 // Enable INT1 which is connected to WAKEINT:
 //
 
+
     IER |= M_INT1;                            // Enable CPU INT1 (timer 0)
 //    IER |= M_INT13;                         // Enable CPU INT13 (timer 1)
 //    IER |= M_INT14;                         // Enable CPU INT14 (timer 2)
-
+    IER |= M_INT3;                            // Enable CPU INT3 (EPWM1-3 INT)
 //
 // Enable XINT1 in the PIE: Group 1 interrupt 4
 // Enable TINT0 in the PIE: Group 1 interrupt 7
+// Enable EPWM INTn in the PIE: Group 3 interrupt 1-3
 //
-    PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+    PieCtrlRegs.PIEIER1.bit.INTx4 = 1;      // XINT1
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;      // TINT0
+    PieCtrlRegs.PIEIER3.bit.INTx2 = 1;      // EPWM2
 
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
+
+//
+// Initialize CRC table for faster calculations
+//
+//    crcInit();
 
 //
 // Initialize LCD
@@ -206,8 +244,29 @@ int main(void)
 //    DisplayLCD(1, "Initializing");
 //    DisplayLCD(2, "Program");
 
+//
+// Initialize PWM
+//
+    Setup_ePWM();
 
-// - Test with global chop on
+    //
+    // Information this example uses to keep track
+    // of the direction the CMPA/CMPB values are
+    // moving, the min and max allowed values and
+    // a pointer to the correct ePWM registers
+    //
+    epwm2_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA
+    epwm2_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // and decreasing CMPB
+    epwm2_info.EPwmTimerIntCount = 0;               // Zero the interrupt
+                                                    // counter
+    epwm2_info.EPwmRegHandle = &EPwm2Regs;          // Set the pointer to the
+                                                    // ePWM module
+    epwm2_info.EPwmMaxCMPA = EPWM2_MAX_CMPA;        // Setup min/max
+                                                    // CMPA/CMPB values
+    epwm2_info.EPwmMinCMPA = EPWM2_MIN_CMPA;
+//    epwm2_info.EPwmMaxCMPB = EPWM2_MAX_CMPB;
+//    epwm2_info.EPwmMinCMPB = EPWM2_MIN_CMPB;
+
 // - Test with CRC and status byte
 //   Perform offset calibration before system gain calibration
 //
@@ -218,7 +277,8 @@ int main(void)
     RTD_Example rtdExample = RTD_4_Wire_Fig16;
     float       rtdRes, rtdTemp;
     ADCchar_Set adcChars;
-    uint16_t     status;
+    uint16_t    status;
+    uint16_t    crc;
     char errorTimeOut[] = "Timeout on conv.";
     char errorSpiConfig[] = "Error in SPI";
 
@@ -251,16 +311,17 @@ int main(void)
         while (1);
     }
 
-//    DisplayLCD(1, "                ");
-//    DisplayLCD(2, "                ");
-    // MAIN LOOP
+
+//
+// MAIN LOOP
+//
     while(1)
     {
 
 
     if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
 
-        adcChars.adcValue1 = readConvertedData( &status, COMMAND );
+        adcChars.adcValue1 = readConvertedData( &status, &crc, COMMAND );
 
         // Convert ADC values RTD resistance
         rtdRes = Convert_Code2RTD_Resistance( &adcChars, rtdSet  );
@@ -276,6 +337,12 @@ int main(void)
         else {
             floatToChar(rtdTemp, sTemperature);
             DisplayLCD(1, sTemperature);
+
+            floatToChar(rtdRes, sRtdRes);
+            DisplayLCD(2, sRtdRes);
+
+            plot1[index] = *pTemperature;
+            index = (index==1023) ? 0 : index+1;
         }
     } else {
         DisplayLCD(1, errorTimeOut);
@@ -287,6 +354,63 @@ int main(void)
 
     }
 
+}
+
+//
+// update_compare - Update the compare values for the specified EPWM
+//
+void update_compare(EPWM_INFO *epwm_info)
+{
+   //
+   // Every 5'th interrupt, change the CMPA/CMPB values
+   //
+   if(epwm_info->EPwmTimerIntCount == 5)
+   {
+       epwm_info->EPwmTimerIntCount = 0;
+
+       //
+       // If we were increasing CMPA, check to see if
+       // we reached the max value.  If not, increase CMPA
+       // else, change directions and decrease CMPA
+       //
+//       if(epwm_info->EPwm_CMPA_Direction == EPWM_CMP_UP)
+//       {
+//           if(epwm_info->EPwmRegHandle->CMPA.bit.CMPA < epwm_info->EPwmMaxCMPA)
+//           {
+//              epwm_info->EPwmRegHandle->CMPA.bit.CMPA++;
+//           }
+//           else
+//           {
+//              epwm_info->EPwm_CMPA_Direction = EPWM_CMP_DOWN;
+//              epwm_info->EPwmRegHandle->CMPA.bit.CMPA--;
+//           }
+//       }
+
+       //
+       // If we were decreasing CMPA, check to see if
+       // we reached the min value.  If not, decrease CMPA
+       // else, change directions and increase CMPA
+       //
+//       else
+//       {
+//           if(epwm_info->EPwmRegHandle->CMPA.bit.CMPA == epwm_info->EPwmMinCMPA)
+//           {
+//              epwm_info->EPwm_CMPA_Direction = EPWM_CMP_UP;
+//              epwm_info->EPwmRegHandle->CMPA.bit.CMPA++;
+//           }
+//           else
+//           {
+//              epwm_info->EPwmRegHandle->CMPA.bit.CMPA--;
+//           }
+//       }
+
+   }
+   else
+   {
+      epwm_info->EPwmTimerIntCount++;
+   }
+
+   return;
 }
 
 
@@ -316,11 +440,34 @@ __interrupt void cpu_timer0_isr(void)
 //    floatToChar(rtdTemp,sTemperature);
 //    DisplayLCD(1, sTemperature);
 
-
+//    plot1[index] = *pTemperature;
+//    index = (index==1023) ? 0 : index+1;
    //
    // Acknowledge this interrupt to receive more interrupts from group 1
    //
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+
+//
+// epwm2_isr - EPWM2 ISR to update compare values
+//
+__interrupt void epwm2_isr(void)
+{
+    //
+    // Update the CMPA values
+    //
+    update_compare(&epwm2_info);
+
+    //
+    // Clear INT flag for this timer
+    //
+    EPwm2Regs.ETCLR.bit.INT = 1;
+
+    //
+    // Acknowledge this interrupt to receive more interrupts from group 3
+    //
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP3;
 }
 
 

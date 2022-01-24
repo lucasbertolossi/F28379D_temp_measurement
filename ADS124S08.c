@@ -505,7 +505,7 @@ void stopConversions()
  *
  * @return      32-bit sign-extended conversion result (data only)
  */
-int32_t readConvertedData(uint16_t status[], readMode mode )
+int32_t readConvertedData(uint16_t status[], uint16_t crc[], readMode mode )
 {
     uint16_t DataTx[RDATA_COMMAND_LENGTH + STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH] = { 0 };    // Initialize all array elements to 0
     uint16_t DataRx[RDATA_COMMAND_LENGTH + STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH] = { 0 };
@@ -513,6 +513,7 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
     uint16_t dataPosition;
     uint16_t byte_options;
     bool    status_byte_enabled = 0;
+    bool    crc_byte_enabled = 0;
     int32_t signByte, upperByte, middleByte, lowerByte;
     uint16_t i;
     // Status Byte is sent if SENDSTAT bit of SYS register is set
@@ -525,6 +526,7 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
         case 1:                         // No STATUS and CRC
             byteLength   = DATA_LENGTH + CRC_LENGTH;
             dataPosition = 0;
+            crc_byte_enabled = 1;
             break;
         case 2:                         // STATUS and no CRC
             byteLength   = STATUS_LENGTH + DATA_LENGTH;
@@ -535,6 +537,7 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
             byteLength   = STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH;
             dataPosition = 1;
             status_byte_enabled = 1;
+            crc_byte_enabled = 1;
             break;
     }
 
@@ -555,6 +558,11 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
         status[0] = DataRx[dataPosition - 1];
     }
 
+    /* Check if CRC byte is enabled and if we have a valid "crc" memory pointer */
+    if ( crc_byte_enabled && crc) {
+        crc[0] = DataRx[dataPosition + 3];
+    }
+
     /* Return the 32-bit sign-extended conversion result */
     if ( DataRx[dataPosition] & 0x80u ) {
         signByte = 0xFF000000;
@@ -570,17 +578,40 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
 }
 
 
-void floatToChar(float fTemperature, char* sTemperature){
-    int temp = (int)(fTemperature*1000);
-    sTemperature[0] = (temp/10000) + '0';       // 12345 /10000 =
+void floatToChar(float fTemperature, char* sChar){
+    if(fTemperature > 90.0){
+        // RTD resistance
+        uint32_t temp = (uint32_t)(fTemperature*1000);
 
-    sTemperature[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
+        sChar[0] = (temp/100000) + '0';      // 123456 / 100000 = 1,23456
 
-    sTemperature[2] = '.';
-    sTemperature[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+        sChar[1] = ((temp/10000) %10) + '0';       // 123456 /10000 = 12,3456
 
-    sTemperature[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+        sChar[2] = ((temp/1000) %10) + '0';       // 123456 /1000 = 123.456 %10 = 3
 
-    sTemperature[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
+        sChar[3] = '.';
+
+        sChar[4] = ((temp/100) %10)+ '0';         // 123456 /100 = 1234.56 %10 = 4
+
+        sChar[5]=((temp/10) %10)+ '0';            // 123456 / 10 = 12345.6 %10 = 5
+
+        sChar[6]= (temp%10)+'0';                  // 123456 / 1 = 123456 %10 = 6
+    }
+
+    else{
+        // Temperature
+        uint16_t temp = (uint16_t)(fTemperature*1000);
+        sChar[0] = (temp/10000) + '0';       // 12345 /10000 =
+
+        sChar[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
+
+        sChar[2] = '.';
+
+        sChar[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+
+        sChar[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+
+        sChar[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
+    }
 
     }

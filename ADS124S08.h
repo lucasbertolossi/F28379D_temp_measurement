@@ -680,7 +680,7 @@ inline uint16_t xferWord(uint16_t tx)
     void restoreRegisterDefaults(void);
     void startConversions(void);
     void stopConversions(void);
-    int32_t readConvertedData(uint16_t status[], readMode mode );
+    int32_t readConvertedData(uint16_t status[], uint16_t crc[], readMode mode );
     void clearChipSelect(void);
     void setChipSelect(void);
     void floatToChar(float fTemperature, char* sTemperature);

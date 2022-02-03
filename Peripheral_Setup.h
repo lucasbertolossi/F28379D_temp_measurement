@@ -5,6 +5,8 @@
  *      Author: lbert
  *
  * GPIO 2: Pwm2A        GPIO3: Pwm2B
+ * GPIO 18 (J1 pin 4): RPWM_EN     GPIO19 (J1 pin3): LPWM_EN; IBT-H BRIDGE
+ *
  */
 
 #ifndef PERIPHERAL_SETUP_H_

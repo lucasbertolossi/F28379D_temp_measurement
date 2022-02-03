@@ -108,6 +108,17 @@ void Setup_ePWM_Gpio(void){
     GpioCtrlRegs.GPAMUX1.bit.GPIO3 = 1;
     GpioCtrlRegs.GPAPUD.bit.GPIO3 = 1;
 
+    GpioCtrlRegs.GPAGMUX2.bit.GPIO18 = 0;
+    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 0;
+    GpioCtrlRegs.GPAPUD.bit.GPIO18 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO18 = 1;     // output
+    GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;   // Clear output latch (RPWM_EN disabled)
+
+    GpioCtrlRegs.GPAGMUX2.bit.GPIO19 = 0;
+    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;
+    GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO19 = 1;     // output
+    GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;   // Clear output latch (LPWM_EN disabled)
     EDIS;
 }
 

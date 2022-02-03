@@ -189,6 +189,38 @@ float RTD_Linearization( RTD_Set *rtdSet, float RTDres )
 #endif
 }
 
+
+
+float calculate_temperature(float RTDres, char interval){
+    float RTDtemp;
+    // Testing a few equations
+    switch(interval){
+        case 'A':       // Considerando as medições de 15 a 40 °C
+            RTDtemp = (RTDres - 100.15)/0.3854;
+            break;
+
+        case 'B':       // Considerando as medições de 22 a 28 °C
+            RTDtemp = (RTDres - 100.18)/0.3845;
+            break;
+
+        case 'C':       // Considerando as medições de 24 a 26 °C
+            RTDtemp = (RTDres - 100.2)/0.3839;
+            break;
+
+        case 'D':       // Considerando as medições de 20 a 30 °C
+            RTDtemp = (RTDres - 100.15)/0.3855;
+            break;
+
+        case 'E':       // Considerando C ( melhor equação para 24 graus C constante) e tirando um offset medio
+            RTDtemp = ((RTDres - 100.2)/0.3839)  - 0.12;
+            break;
+    }
+
+    return RTDtemp;
+
+    }
+
+
 /** @} // group group_RTD
  *
  */

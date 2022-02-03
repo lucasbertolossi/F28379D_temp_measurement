@@ -87,7 +87,7 @@ typedef struct
 
 EPWM_INFO epwm2_info;
 
-float setpoint;
+//float setpoint = 25.0f;   // using pid struct
 
 // Global parameter passing to interrupts must occur through global memory
 char* sTemperature = "";
@@ -116,20 +116,20 @@ uint32_t MEP_ScaleFactor = 0; //scale factor value
 volatile struct EPWM_REGS *ePWM[] = {0, &EPwm1Regs, &EPwm2Regs};
 
 
-typedef enum RTDExampleDef{
-    RTD_2_Wire_Fig15,     // 2-Wire RTD example using ADS124S08 EVM, User's Guide Figure 15
-    RTD_3_Wire_Fig14,     // 3-Wire RTD example using ADS124S08 EVM, User's Guide Figure 14
-    RTD_4_Wire_Fig16,     // 4-Wire RTD example using ADS124S08 EVM, User's Guide Figure 16
-} RTD_Example;
+//typedef enum RTDExampleDef{
+//    RTD_2_Wire_Fig15,     // 2-Wire RTD example using ADS124S08 EVM, User's Guide Figure 15
+//    RTD_3_Wire_Fig14,     // 3-Wire RTD example using ADS124S08 EVM, User's Guide Figure 14
+//    RTD_4_Wire_Fig16,     // 4-Wire RTD example using ADS124S08 EVM, User's Guide Figure 16
+//} RTD_Example;
 
 //
 // Function Prototypes
 //
 __interrupt void epwm2_isr(void);
-__interrupt void xint1_isr(void);
-__interrupt void cpu_timer0_isr(void);
-//__interrupt void cpu_timer1_isr(void);
-//__interrupt void cpu_timer2_isr(void);
+__interrupt void xint1_isr(void);       // /DRDY
+__interrupt void xint2_isr(void);         // Increase setpoint
+__interrupt void xint3_isr(void);         // Decrease setpoint
+//__interrupt void cpu_timer0_isr(void);
 void update_compare(EPWM_INFO *epwm_info);
 void error(void);
 void select_pwm(float dutycycle);
@@ -147,12 +147,10 @@ int main(void)
 //
    InitSysCtrl();
 
-
 //
 // Initialize PWM GPIO
 //
    Setup_ePWM_Gpio();
-
 
 //
 // Clear all interrupts and initialize PIE vector table:
@@ -189,7 +187,9 @@ int main(void)
 //
     EALLOW;
     PieVectTable.XINT1_INT = &xint1_isr;
-    PieVectTable.TIMER0_INT = &cpu_timer0_isr;
+    PieVectTable.XINT2_INT = &xint2_isr;
+    PieVectTable.XINT3_INT = &xint3_isr;
+//    PieVectTable.TIMER0_INT = &cpu_timer0_isr;
 //    PieVectTable.TIMER1_INT = &cpu_timer1_isr;
 //    PieVectTable.TIMER2_INT = &cpu_timer2_isr;
     PieVectTable.EPWM2_INT = &epwm2_isr;
@@ -199,14 +199,13 @@ int main(void)
 // Initialize the Device Peripheral. This function can be found
 // in F2837xD_CpuTimers.c
 //
-    InitCpuTimers();   // For this example, only initialize the Cpu Timers
-
+//    InitCpuTimers();   // For this example, only initialize the Cpu Timers
 
 //
 // Configure CPU-Timer 0, 1, and 2 to interrupt every second:
 // 200MHz CPU Freq, 1 second Period (in uSeconds)
 //
-    ConfigCpuTimer(&CpuTimer0, 200, 1000000);
+//    ConfigCpuTimer(&CpuTimer0, 200, 1000000);
 //    ConfigCpuTimer(&CpuTimer1, 200, 1000000);
 //    ConfigCpuTimer(&CpuTimer2, 200, 1000000);
 
@@ -216,7 +215,7 @@ int main(void)
 // ConfigCpuTimer and InitCpuTimers (in F2837xD_cputimervars.h), the below
 // settings must also be updated.
 //
-    CpuTimer0Regs.TCR.all = 0x4000;
+//    CpuTimer0Regs.TCR.all = 0x4000;
 //    CpuTimer1Regs.TCR.all = 0x4000;
 //    CpuTimer2Regs.TCR.all = 0x4000;
 
@@ -225,22 +224,25 @@ int main(void)
 //
     xINT1Count = 0;       // Count XINT1 interrupts
 
-
 //
 // Enable interrupts
 //
-    IER |= M_INT1;                            // Enable CPU INT1 (timer 0)
+    IER |= M_INT1;                            // Enable CPU INT1 (timer 0, XINT1, XINT2)
 //    IER |= M_INT13;                         // Enable CPU INT13 (timer 1)
 //    IER |= M_INT14;                         // Enable CPU INT14 (timer 2)
     IER |= M_INT3;                            // Enable CPU INT3 (EPWM1-3 INT)
-
+    IER |= M_INT12;                           // Enable CPU INT12 (XINT3)
 //
 // Enable XINT1 in the PIE: Group 1 interrupt 4
+// Enable XINT2 in the PIE: Group 1 interrupt 5
+// Enable XINT3 in the PIE: Group 12 interrupt 1
 // Enable TINT0 in the PIE: Group 1 interrupt 7
 // Enable EPWM INTn in the PIE: Group 3 interrupt 1-3
 //
     PieCtrlRegs.PIEIER1.bit.INTx4 = 1;      // XINT1
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;      // TINT0
+    PieCtrlRegs.PIEIER1.bit.INTx5 = 1;      // XINT2
+    PieCtrlRegs.PIEIER12.bit.INTx1 = 1;     // XINT3
+//    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;      // TINT0
     PieCtrlRegs.PIEIER3.bit.INTx2 = 1;      // EPWM2
 
 //
@@ -248,6 +250,7 @@ int main(void)
 //
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
+
 
 //
 // Initialize CRC table for faster calculations
@@ -266,23 +269,22 @@ int main(void)
 //
 // Initialize PID controller
 //
-//    PIDController pid = { pid->Kp = PID_KP,
-//                          pid->Ki = PID_KI,
-//                          pid->Kd = PID_KD,
-//                          pid->tau  = PID_TAU,
-//                          pid->limMin = PID_LIM_MIN,
-//                          pid->limMax = PID_LIM_MAX,
+    PIDController pid = { pid->Kp = PID_KP,
+                          pid->Ki = PID_KI,
+                          pid->Kd = PID_KD,
+                          pid->tau  = PID_TAU,
+                          pid->limMin = PID_LIM_MIN,
+                          pid->limMax = PID_LIM_MAX,
 //                          pid->limMinInt = PID_LIM_MIN_INT,
 //                          pid->limMaxInt = PID_LIM_MAX_INT,
-//                          pid->T = SAMPLE_TIME_S };
-//    PIDController_Init(&pid);
-//
-//    setpoint = 25.0f;
+                          pid->T = SAMPLE_TIME_S };
+                          pid->setpoint = 25.0f;
+    PIDController_Init(&pid);
 
 //
 // Initialize PWM
 //
-//
+
     status = SFO_INCOMPLETE;
     DutyFine = 0;
     dutycycle = 0.2;    // initial duty cycle
@@ -424,16 +426,11 @@ int main(void)
                    // of MEP steps/coarse step
     }              // exceeds maximum of 255.
 
-// calib test
 
-//   to do: Test with CRC and status byte
-//   to do: Perform offset calibration before system gain calibration
-//
     // Initializes SPI and ADS124S08 communication
-
     RTD_Set     *rtdSet = NULL;
-    RTD_Type    rtdType = Pt;
-    RTD_Example rtdExample = RTD_4_Wire_Fig16;
+//    RTD_Type    rtdType = Pt;
+//    RTD_Example rtdExample = RTD_4_Wire_Fig16;
     float       rtdRes, rtdTemp;
     ADCchar_Set adcChars;
     uint16_t    statusb;
@@ -441,14 +438,8 @@ int main(void)
     char errorTimeOut[] = "Timeout on conv.";
     char errorSpiConfig[] = "Error in SPI";
 
-//    switch ( rtdType ) {
-//        case Pt:
     rtdSet = &PT100_RTD;
-//            break;
-//    }
 
-//    switch ( rtdExample ) {
-//        case RTD_4_Wire_Fig16:
     adcChars.inputMuxConfReg = RTD_FOUR_WIRE_INPUT_MUX;
     adcChars.pgaReg          = RTD_FOUR_WIRE_PGA;
     adcChars.dataRateReg     = RTD_FOUR_WIRE_DATARATE;
@@ -458,8 +449,7 @@ int main(void)
     adcChars.Vref            = RTD_FOUR_WIRE_INT_VREF;
     rtdSet->Rref             = RTD_FOUR_WIRE_REF_RES;
     rtdSet->wiring           = Four_Wire_High_Side_Ref;
-//            break;
-//    }
+
     adcChars.VBIASReg = RTD_VBIAS;
 
     // Initialize ADC peripherals, program ADC settings and check communication
@@ -490,8 +480,9 @@ int main(void)
 
         rtdTemp = calculate_temperature(rtdRes, 'E');
 //        rtdTempB = calculate_temperature(rtdRes, 'C');  //plot A
+
         /* Compute new control signal */
-        dutycycle = PIDController_Update(&pid, setpoint, rtdTemp);
+        dutycycle = PIDController_Update(&pid, pid->setpoint, rtdTemp);
 
         dutycycle = select_pwm(dutycycle);
 
@@ -523,9 +514,8 @@ int main(void)
 //        while (1);
     }
 
-    }
-
-}
+    }   // end while loop
+} //end main()
 
 //
 // update_compare - Update the compare values for the specified EPWM
@@ -539,19 +529,13 @@ void update_compare(EPWM_INFO *epwm_info)
         status = SFO();
         if(status == SFO_ERROR)
         {
-        //
         // SFO function returns 2 if an error occurs & # of
         // MEP steps/coarse step exceeds maximum of 255.
-        //
         error();
         }
     }
 
-
-
-    //
     // Every 5'th interrupt, change the CMPA/CMPB values
-    //
     if(epwm_info->EPwmTimerIntCount == 5)
     {
         // makes duty cycle positive if control output is negative
@@ -582,28 +566,21 @@ void update_compare(EPWM_INFO *epwm_info)
         CMPBHR_reg_val = CMPBHR_reg_val << 8;
         #endif
 
-        //
         // Example for a 32 bit write to CMPA:CMPAHR
-        //
         EPwm2Regs.CMPA.all = ((long)CMPA_reg_val) << 16 |
                              CMPAHR_reg_val; // loses lower 8-bits
 
-        //
         // Example for a 32 bit write to CMPB:CMPBHR
-        //
         EPwm2Regs.CMPB.all = ((long)CMPB_reg_val) << 16 |
                              CMPBHR_reg_val; // loses lower 8-bits
 
-
         epwm_info->EPwmTimerIntCount = 0;
     }
-
    }
    else
    {
       epwm_info->EPwmTimerIntCount++;
    }
-
    return;
 }
 
@@ -616,33 +593,47 @@ __interrupt void xint1_isr(void)
     /* Set nDRDY flag to true */
     flag_nDRDY_INTERRUPT = true;
 
-    //
     // Acknowledge this interrupt to get more interruptions from group 1
-    //
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
 
+
+// External interrupt XINT2 increases setpoint
+__interrupt void xint2_isr(void)
+{
+    if (pid->setpoint < 30){
+        pid->setpoint += 1;
+    }
+
+    // Acknowledge this interrupt to get more interruptions from group 1
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+
+// External interrupt XINT3 decreases setpoint
+__interrupt void xint3_isr(void)
+{
+    if (pid->setpoint > 15){
+        pid->setpoint -= 1;
+    }
+
+    // Acknowledge this interrupt to get more interruptions from group 1
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP12;
 }
 
 
 //
 // cpu_timer0_isr - CPU Timer0 ISR with interrupt counter
 //
-__interrupt void cpu_timer0_isr(void)
-{
-    CpuTimer0.InterruptCount++;
-
-//    plot1[index] = *pTemperature;
-
-//    floatToChar(rtdTemp,sTemperature);
-//    DisplayLCD(1, sTemperature);
-
-//    plot1[index] = *pTemperature;
-//    index = (index==1023) ? 0 : index+1;
-   //
-   // Acknowledge this interrupt to receive more interrupts from group 1
-   //
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
-}
+//__interrupt void cpu_timer0_isr(void)
+//{
+//    CpuTimer0.InterruptCount++;
+//
+//   //
+//   // Acknowledge this interrupt to receive more interrupts from group 1
+//   //
+//    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+//}
 
 
 ////
@@ -666,25 +657,6 @@ __interrupt void epwm2_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP3;
 }
 
-
-//
-// cpu_timer1_isr - CPU Timer1 ISR
-//
-//__interrupt void cpu_timer1_isr(void)
-//{
-//    CpuTimer1.InterruptCount++;
-//}
-
-
-//
-//
-// cpu_timer2_isr CPU Timer2 ISR
-//
-//__interrupt void cpu_timer2_isr(void)
-//{
-//    CpuTimer2.InterruptCount++;
-//}
-//
 
 //
 // error - Halt debugger when called

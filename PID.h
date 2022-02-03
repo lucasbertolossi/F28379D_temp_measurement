@@ -31,6 +31,9 @@ typedef struct {
 	/* Controller output */
 	float out;
 
+	/* Setpoint */
+	float setpoint;
+
 } PIDController;
 
 

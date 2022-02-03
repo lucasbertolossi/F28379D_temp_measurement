@@ -123,3 +123,32 @@ void Setup_ePWM_Gpio(void){
 }
 
 
+// Setup XINT2 (increase setpoint) and XINT3 (decrease setpoint)
+void Setup_Buttons_Gpio(void){
+    EALLOW;
+
+    //
+    // Make GPIO25 the input source for XINT1
+    //
+    GpioCtrlRegs.GPAMUX2.bit.GPIO25 = 0;  // GPIO25 = GPIO25
+    GpioCtrlRegs.GPADIR.bit.GPIO25 = 0;   // GPIO25 = input
+    GPIO_SetupXINT2Gpio(25);             // XINT1 connected to GPIO25
+
+    //
+    // Make GPIO26 the input source for XINT2
+    //
+    GpioCtrlRegs.GPAMUX2.bit.GPIO26 = 0;  // GPIO26 = GPIO26
+    GpioCtrlRegs.GPADIR.bit.GPIO26 = 0;   // GPIO26 = input
+    GPIO_SetupXINT3Gpio(26);              // XINT2 connected to GPIO26
+
+    //
+    // Configure XINT1, XINT2
+    //
+    XintRegs.XINT2CR.bit.POLARITY = 1;    // Rising edge interrupt
+    XintRegs.XINT3CR.bit.POLARITY = 1;    // Rising edge interrupt
+
+    XintRegs.XINT2CR.bit.ENABLE = 1;      // Enable XINT2
+    XintRegs.XINT3CR.bit.ENABLE = 1;      // Enable XINT3
+
+    EDIS;
+}

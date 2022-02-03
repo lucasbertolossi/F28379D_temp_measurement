@@ -237,7 +237,7 @@ void SetupGpioADC(void){
     // Configure XINT1
     //
     XintRegs.XINT1CR.bit.POLARITY = 0;          // Falling edge interrupt
-    XintRegs.XINT2CR.bit.POLARITY = 1;          // Rising edge interrupt
+//    XintRegs.XINT2CR.bit.POLARITY = 1;          // Rising edge interrupt
 
     //
     // Enable XINT1

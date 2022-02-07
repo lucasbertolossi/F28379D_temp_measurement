@@ -4,8 +4,8 @@
  *  Created on: 23 de nov de 2021
  *      Author: lbert
  *
- * GPIO 2: Pwm2A        GPIO3: Pwm2B
- * GPIO 18 (J1 pin 4): RPWM_EN     GPIO19 (J1 pin3): LPWM_EN; IBT-H BRIDGE
+ * GPIO 2 (J4 pin 38): Pwm2A        GPIO3 (J4 pin 37): Pwm2B
+ * GPIO 18 (J1 pin 4): RPWM_EN     GPIO19 (J1 pin 3): LPWM_EN; IBT-H BRIDGE
  *
  */
 

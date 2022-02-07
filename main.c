@@ -72,6 +72,7 @@
 // Global
 //
 //****************************************************************************
+
 typedef struct
 {
     volatile struct EPWM_REGS *EPwmRegHandle;
@@ -82,27 +83,9 @@ typedef struct
     Uint16 EPwmMinCMPA;
     Uint16 EPwmMaxCMPB;
     Uint16 EPwmMinCMPB;
-    uint16_t dutyCycle;
+    float dutyCycle;
 }EPWM_INFO;
-
 EPWM_INFO epwm2_info;
-
-//float setpoint = 25.0f;   // using pid struct
-
-// Global parameter passing to interrupts must occur through global memory
-char* sTemperature = "";
-char* sRtdRes = "";
-float rtdTemp = 0;
-float rtdTempB = 0;
-//float plot1[256];              // used for plotting temperature
-float plot2[256];              // used for plotting temperature (testing)
-float plot3[256];              // used for plotting temperature (testing)
-float *pTemperature = &rtdTemp; // used for plotting temperature
-uint32_t index = 0;
-uint32_t indextest = 0;
-volatile uint16_t xINT1Count;
-bool flag_nDRDY_INTERRUPT = false;
-
 float dutycycle;
 uint16_t DutyFine;
 uint16_t status;
@@ -116,6 +99,25 @@ uint32_t MEP_ScaleFactor = 0; //scale factor value
 volatile struct EPWM_REGS *ePWM[] = {0, &EPwm1Regs, &EPwm2Regs};
 
 
+
+// Global parameter passing to interrupts must occur through global memory
+char* sTemperature = "";
+char* sRtdRes = "";
+float rtdTemp = 0;
+float rtdTempB = 0;
+//float plot1[256];              // used for plotting temperature
+float plot2[32];              // used for plotting temperature (testing)
+float plot3[32];              // used for plotting temperature (testing)
+float *pTemperature = &rtdTemp; // used for plotting temperature
+uint32_t index = 0;
+uint32_t indextest = 0;
+volatile uint16_t xINT1Count;
+bool flag_nDRDY_INTERRUPT = false;
+
+
+//float setpoint = 25.0f;   // using pid struct
+
+
 //typedef enum RTDExampleDef{
 //    RTD_2_Wire_Fig15,     // 2-Wire RTD example using ADS124S08 EVM, User's Guide Figure 15
 //    RTD_3_Wire_Fig14,     // 3-Wire RTD example using ADS124S08 EVM, User's Guide Figure 14
@@ -126,7 +128,7 @@ volatile struct EPWM_REGS *ePWM[] = {0, &EPwm1Regs, &EPwm2Regs};
 // Function Prototypes
 //
 __interrupt void epwm2_isr(void);
-__interrupt void xint1_isr(void);       // /DRDY
+__interrupt void xint1_isr(void);         // /DRDY
 __interrupt void xint2_isr(void);         // Increase setpoint
 __interrupt void xint3_isr(void);         // Decrease setpoint
 //__interrupt void cpu_timer0_isr(void);
@@ -150,7 +152,7 @@ int main(void)
 //
 // Initialize PWM GPIO
 //
-   Setup_ePWM_Gpio();
+//   Setup_ePWM_Gpio();
 
 //
 // Clear all interrupts and initialize PIE vector table:
@@ -269,41 +271,68 @@ int main(void)
 //
 // Initialize PID controller
 //
-    PIDController pid = { pid->Kp = PID_KP,
-                          pid->Ki = PID_KI,
-                          pid->Kd = PID_KD,
-                          pid->tau  = PID_TAU,
-                          pid->limMin = PID_LIM_MIN,
-                          pid->limMax = PID_LIM_MAX,
-//                          pid->limMinInt = PID_LIM_MIN_INT,
-//                          pid->limMaxInt = PID_LIM_MAX_INT,
-                          pid->T = SAMPLE_TIME_S };
-                          pid->setpoint = 25.0f;
-    PIDController_Init(&pid);
 
+    /* Controller parameters */
+//#define PID_KP  1.0f
+//#define PID_KI  0.5f
+//#define PID_KD  0.0f
+//
+//#define PID_TAU 0.02f
+//
+//#define PID_LIM_MIN -1.0f
+//#define PID_LIM_MAX  1.0f
+//    float PID_KP  = 1.0;
+//    float PID_KI  = 0.5;
+//    float PID_KD  = 0.0;
+//
+//    float PID_TAU = 0.02;
+//
+//    float PID_LIM_MIN = -1.0;
+//    float PID_LIM_MAX = 1.0;
+
+//    #define PID_LIM_MIN_INT -5.0f
+//    #define PID_LIM_MAX_INT  5.0f
+
+//    #define SAMPLE_TIME_S 0.01f
+
+    /* Maximum run-time of simulation */
+//    #define SIMULATION_TIME_MAX 4.0f
+//    PIDController pid;
+//    pid.Kp = PID_KP;
+//    pid.Ki = PID_KI;
+//    pid.Kd = PID_KD;
+//    pid.tau  = PID_TAU;
+//    pid.limMin = PID_LIM_MIN;
+//    pid.limMax = PID_LIM_MAX;
+////                          pid->T = SAMPLE_TIME_S};
+//    pid.setpoint = 25.0f;
+//
+//    PIDController_Init(&pid);
+
+//    PIDController pid;
 //
 // Initialize PWM
 //
 
-    status = SFO_INCOMPLETE;
-    DutyFine = 0;
-    dutycycle = 0.2;    // initial duty cycle
+//    status = SFO_INCOMPLETE;
+//    DutyFine = 0;
+//    dutycycle = 0.2;    // initial duty cycle
 
 ////
 //// Calling SFO() updates the HRMSTEP register with calibrated MEP_ScaleFactor.
 //// HRMSTEP must be populated with a scale factor value prior to enabling
 //// high resolution period control.
 ////
-    while(status == SFO_INCOMPLETE)
-    {
-        status = SFO();
-        if(status == SFO_ERROR)
-        {
-            error();   // SFO function returns 2 if an error occurs & # of MEP
-        }              // steps/coarse step exceeds maximum of 255.
-    }
-
-    Setup_ePWM();
+//    while(status == SFO_INCOMPLETE)
+//    {
+//        status = SFO();
+//        if(status == SFO_ERROR)
+//        {
+//            error();   // SFO function returns 2 if an error occurs & # of MEP
+//        }              // steps/coarse step exceeds maximum of 255.
+//    }
+//
+//    Setup_ePWM();
 
 //    //
 //    // Information this example uses to keep track
@@ -311,18 +340,19 @@ int main(void)
 //    // moving, the min and max allowed values and
 //    // a pointer to the correct ePWM registers
 //    //
-    epwm2_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA
-    epwm2_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // and decreasing CMPB
-    epwm2_info.EPwmTimerIntCount = 0;               // Zero the interrupt
-                                                    // counter
-    epwm2_info.EPwmRegHandle = &EPwm2Regs;          // Set the pointer to the
-                                                    // ePWM module
-    epwm2_info.EPwmMaxCMPA = EPWM2_MAX_CMPA;        // Setup min/max
-                                                    // CMPA/CMPB values
-    epwm2_info.EPwmMinCMPA = EPWM2_MIN_CMPA;
-    epwm2_info.EPwmMaxCMPB = EPWM2_MAX_CMPB;
-    epwm2_info.EPwmMinCMPB = EPWM2_MIN_CMPB;
-//
+//    epwm2_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA
+//    epwm2_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // and decreasing CMPB
+//    epwm2_info.EPwmTimerIntCount = 0;               // Zero the interrupt
+//                                                    // counter
+//    epwm2_info.EPwmRegHandle = &EPwm2Regs;          // Set the pointer to the
+//                                                    // ePWM module
+//    epwm2_info.EPwmMaxCMPA = EPWM2_MAX_CMPA;        // Setup min/max
+//                                                    // CMPA/CMPB values
+//    epwm2_info.EPwmMinCMPA = EPWM2_MIN_CMPA;
+//    epwm2_info.EPwmMaxCMPB = EPWM2_MAX_CMPB;
+//    epwm2_info.EPwmMinCMPB = EPWM2_MIN_CMPB;
+//    epwm2_info.dutyCycle = 0.2;
+////
 //    /* all below calculation apply for CMPB as well
 //    // CMPA_reg_val , CMPA_reg_val is calculated as a Q0.
 //    // Since DutyFine is a Q15 number, and the period is Q0
@@ -376,37 +406,37 @@ int main(void)
 //    //
 //    // All the above operations may be condensed into
 //    // the following form:
-    DutyFine = ceil(32767*dutycycle);   // converts duty cycle (float) to Q15 number
-    CMPA_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
-    CMPB_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
-    temp = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
-    temp1 = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
-    temp = temp - ((long)CMPA_reg_val << 15);
-    temp1 = temp1 - ((long)CMPB_reg_val << 15);
-
-    #if(AUTOCONVERT)
-    CMPAHR_reg_val = temp << 1; // convert to Q16
-    CMPBHR_reg_val = temp << 1; // convert to Q16
-    #else
-    CMPAHR_reg_val = ((temp * MEP_ScaleFactor) +
-                      (0x0080 << 7)) >> 15;
-    CMPAHR_reg_val = CMPAHR_reg_val << 8;
-    CMPBHR_reg_val = ((temp1 * MEP_ScaleFactor) +
-                      (0x0080 << 7)) >> 15;
-    CMPBHR_reg_val = CMPBHR_reg_val << 8;
-    #endif
+//    DutyFine = ceil(32767*dutycycle);   // converts duty cycle (float) to Q15 number
+//    CMPA_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
+//    CMPB_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
+//    temp = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
+//    temp1 = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
+//    temp = temp - ((long)CMPA_reg_val << 15);
+//    temp1 = temp1 - ((long)CMPB_reg_val << 15);
+//
+//    #if(AUTOCONVERT)
+//    CMPAHR_reg_val = temp << 1; // convert to Q16
+//    CMPBHR_reg_val = temp << 1; // convert to Q16
+//    #else
+//    CMPAHR_reg_val = ((temp * MEP_ScaleFactor) +
+//                      (0x0080 << 7)) >> 15;
+//    CMPAHR_reg_val = CMPAHR_reg_val << 8;
+//    CMPBHR_reg_val = ((temp1 * MEP_ScaleFactor) +
+//                      (0x0080 << 7)) >> 15;
+//    CMPBHR_reg_val = CMPBHR_reg_val << 8;
+//    #endif
 
 //   //
 //   // Example for a 32 bit write to CMPA:CMPAHR
 //   //
-    EPwm2Regs.CMPA.all = ((long)CMPA_reg_val) << 16 |
-                          CMPAHR_reg_val; // loses lower 8-bits
+//    EPwm2Regs.CMPA.all = ((long)CMPA_reg_val) << 16 |
+//                          CMPAHR_reg_val; // loses lower 8-bits
 //
 //   //
 //   // Example for a 32 bit write to CMPB:CMPBHR
 //   //
-    EPwm2Regs.CMPB.all = ((long)CMPB_reg_val) << 16 |
-                          CMPBHR_reg_val; // loses lower 8-bits
+//    EPwm2Regs.CMPB.all = ((long)CMPB_reg_val) << 16 |
+//                          CMPBHR_reg_val; // loses lower 8-bits
 
 //    //
 //    // Call the scale factor optimizer lib function SFO()
@@ -417,14 +447,14 @@ int main(void)
 //    // function also updates the HRMSTEP register with the
 //    // scale factor value.
 //    //
-    status = SFO(); // in background, MEP calibration module
-                    // continuously updates MEP_ScaleFactor
-//
-    if(status == SFO_ERROR)
-    {
-        error();   // SFO function returns 2 if an error occurs & #
-                   // of MEP steps/coarse step
-    }              // exceeds maximum of 255.
+//    status = SFO(); // in background, MEP calibration module
+//                    // continuously updates MEP_ScaleFactor
+////
+//    if(status == SFO_ERROR)
+//    {
+//        error();   // SFO function returns 2 if an error occurs & #
+//                   // of MEP steps/coarse step
+//    }              // exceeds maximum of 255.
 
 
     // Initializes SPI and ADS124S08 communication
@@ -477,17 +507,15 @@ int main(void)
 
         // Convert RTD resistance to temperature and linearize
 //        rtdTemp = RTD_Linearization( rtdSet, rtdRes );
+//        rtdTempB = RTD_Linearization( rtdSet, rtdRes );
 
-        rtdTemp = calculate_temperature(rtdRes, 'E');
-//        rtdTempB = calculate_temperature(rtdRes, 'C');  //plot A
+        rtdTemp = calculate_temperature(rtdRes, 'C');
+        rtdTempB = calculate_temperature(rtdRes, 'E');
 
         /* Compute new control signal */
-        dutycycle = PIDController_Update(&pid, pid->setpoint, rtdTemp);
+//        epwm2_info.dutyCycle = PIDController_Update(&pid, pid->setpoint, rtdTemp);
 
-        dutycycle = select_pwm(dutycycle);
-
-        epwm2_info.dutyCycle = dutycycle;
-
+//        select_pwm(dutycycle);
 
         if ( isnan(rtdTemp) ) {
             DisplayLCD(1, "NaN");
@@ -502,10 +530,10 @@ int main(void)
             DisplayLCD(2, sRtdRes);
 
             plot3[indextest] = rtdTemp;
-//            plot2[indextest] = rtdTempB;
-            plot2[indextest] = rtdRes;
+            plot2[indextest] = rtdTempB;
+//            plot2[indextest] = rtdRes;
 
-            indextest = (indextest==255) ? 0 : indextest+1;
+            indextest = (indextest==31) ? 0 : indextest+1;
 
         }
     } else {
@@ -520,69 +548,68 @@ int main(void)
 //
 // update_compare - Update the compare values for the specified EPWM
 //
-void update_compare(EPWM_INFO *epwm_info)
-{
-    float abs_duty_cycle;
-    if(epwm_info->EPwmTimerIntCount == 1000)
-    {
-        epwm_info->EPwmTimerIntCount = 0;
-        status = SFO();
-        if(status == SFO_ERROR)
-        {
-        // SFO function returns 2 if an error occurs & # of
-        // MEP steps/coarse step exceeds maximum of 255.
-        error();
-        }
-    }
-
-    // Every 5'th interrupt, change the CMPA/CMPB values
-    if(epwm_info->EPwmTimerIntCount == 5)
-    {
-        // makes duty cycle positive if control output is negative
-        if(epwm2_info->dutyCycle < 0){
-            abs_duty_cycle = -epwm2_info->dutyCycle;
-        }
-        else{
-            abs_duty_cycle = epwm2_info->dutyCycle;
-        }
-
-        DutyFine = ceil(32767*abs_duty_cycle);   // converts duty cycle (float) to Q15 number
-        CMPA_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
-        CMPB_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
-        temp = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
-        temp1 = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
-        temp = temp - ((long)CMPA_reg_val << 15);
-        temp1 = temp1 - ((long)CMPB_reg_val << 15);
-
-        #if(AUTOCONVERT)
-        CMPAHR_reg_val = temp << 1; // convert to Q16
-        CMPBHR_reg_val = temp << 1; // convert to Q16
-        #else
-        CMPAHR_reg_val = ((temp * MEP_ScaleFactor) +
-                         (0x0080 << 7)) >> 15;
-        CMPAHR_reg_val = CMPAHR_reg_val << 8;
-        CMPBHR_reg_val = ((temp1 * MEP_ScaleFactor) +
-                         (0x0080 << 7)) >> 15;
-        CMPBHR_reg_val = CMPBHR_reg_val << 8;
-        #endif
-
-        // Example for a 32 bit write to CMPA:CMPAHR
-        EPwm2Regs.CMPA.all = ((long)CMPA_reg_val) << 16 |
-                             CMPAHR_reg_val; // loses lower 8-bits
-
-        // Example for a 32 bit write to CMPB:CMPBHR
-        EPwm2Regs.CMPB.all = ((long)CMPB_reg_val) << 16 |
-                             CMPBHR_reg_val; // loses lower 8-bits
-
-        epwm_info->EPwmTimerIntCount = 0;
-    }
-   }
-   else
-   {
-      epwm_info->EPwmTimerIntCount++;
-   }
-   return;
-}
+//void update_compare(EPWM_INFO *epwm_info)
+//{
+//    float abs_duty_cycle;
+//    if(epwm_info->EPwmTimerIntCount == 1000)
+//    {
+//        epwm_info->EPwmTimerIntCount = 0;
+//        status = SFO();
+//        if(status == SFO_ERROR)
+//        {
+//        // SFO function returns 2 if an error occurs & # of
+//        // MEP steps/coarse step exceeds maximum of 255.
+//        error();
+//        }
+//    }
+//
+//    // Every 5'th interrupt, change the CMPA/CMPB values
+//    if(epwm_info->EPwmTimerIntCount == 5)
+//    {
+//        // makes duty cycle positive if control output is negative
+//        if(epwm2_info->dutyCycle < 0){
+//            abs_duty_cycle = -epwm2_info->dutyCycle;
+//        }
+//        else{
+//            abs_duty_cycle = epwm2_info->dutyCycle;
+//        }
+//
+//        DutyFine = ceil(32767*abs_duty_cycle);   // converts duty cycle (float) to Q15 number
+//        CMPA_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
+//        CMPB_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
+//        temp = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
+//        temp1 = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) ;
+//        temp = temp - ((long)CMPA_reg_val << 15);
+//        temp1 = temp1 - ((long)CMPB_reg_val << 15);
+//
+//        #if(AUTOCONVERT)
+//        CMPAHR_reg_val = temp << 1; // convert to Q16
+//        CMPBHR_reg_val = temp << 1; // convert to Q16
+//        #else
+//        CMPAHR_reg_val = ((temp * MEP_ScaleFactor) +
+//                         (0x0080 << 7)) >> 15;
+//        CMPAHR_reg_val = CMPAHR_reg_val << 8;
+//        CMPBHR_reg_val = ((temp1 * MEP_ScaleFactor) +
+//                         (0x0080 << 7)) >> 15;
+//        CMPBHR_reg_val = CMPBHR_reg_val << 8;
+//        #endif
+//
+//        // Example for a 32 bit write to CMPA:CMPAHR
+//        EPwm2Regs.CMPA.all = ((long)CMPA_reg_val) << 16 |
+//                             CMPAHR_reg_val; // loses lower 8-bits
+//
+//        // Example for a 32 bit write to CMPB:CMPBHR
+//        EPwm2Regs.CMPB.all = ((long)CMPB_reg_val) << 16 |
+//                             CMPBHR_reg_val; // loses lower 8-bits
+//
+//        epwm_info->EPwmTimerIntCount = 0;
+//    }
+//    else
+//    {
+//        epwm_info->EPwmTimerIntCount++;
+//    }
+//    return;
+//}
 
 
 // External interrupt XINT1 indicates availability of new conversion data.
@@ -601,9 +628,9 @@ __interrupt void xint1_isr(void)
 // External interrupt XINT2 increases setpoint
 __interrupt void xint2_isr(void)
 {
-    if (pid->setpoint < 30){
-        pid->setpoint += 1;
-    }
+//    if (pid->setpoint < 30){
+//        pid->setpoint += 1;
+//    }
 
     // Acknowledge this interrupt to get more interruptions from group 1
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
@@ -613,9 +640,9 @@ __interrupt void xint2_isr(void)
 // External interrupt XINT3 decreases setpoint
 __interrupt void xint3_isr(void)
 {
-    if (pid->setpoint > 15){
-        pid->setpoint -= 1;
-    }
+//    if (pid->setpoint > 15){
+//        pid->setpoint -= 1;
+//    }
 
     // Acknowledge this interrupt to get more interruptions from group 1
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP12;
@@ -644,7 +671,7 @@ __interrupt void epwm2_isr(void)
     //
     // Update the CMPA values
     //
-    update_compare(&epwm2_info);
+//    update_compare(&epwm2_info);
 
     //
     // Clear INT flag for this timer

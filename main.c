@@ -59,7 +59,6 @@
 #include "adchal_tidrivers_adapted.h"
 #include <math.h>
 #include "Peripheral_Setup.h"
-//#include "PID.h"
 #include "SFO_V8.h"
 /* RTD related includes */
 #include "inc/rtd.h"
@@ -83,8 +82,8 @@ typedef struct
     uint16_t EPwmMinCMPB;
     float dutyCycle;
 }EPWM_INFO;
-//    epwm2_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA
-//    epwm2_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // and decreasing CMPB
+//    epwm2_info->EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA
+//    epwm2_info->EPwm_CMPB_Direction = EPWM_CMP_DOWN; // and decreasing CMPB
 EPWM_INFO epwm2_info = {
     .EPwmTimerIntCount = 0,               // Zero the interrupt counter
     .EPwmRegHandle = &EPwm2Regs,          // Set the pointer to the ePWM module
@@ -92,8 +91,11 @@ EPWM_INFO epwm2_info = {
     .EPwmMinCMPA = EPWM2_MIN_CMPA,
     .EPwmMaxCMPB = EPWM2_MAX_CMPB,
     .EPwmMinCMPB = EPWM2_MIN_CMPB,
-    .dutyCycle = 0.3
+    .dutyCycle = 0.305
 };
+
+//EPWM_INFO *epwm2_info = NULL;
+//epwm2_info = &epwm2;
 
 //float dutycycle;
 uint16_t DutyFine;
@@ -150,7 +152,6 @@ typedef struct PIDController {
     /* Setpoint */
 //  float setpoint;
 } PIDController;
-
 
 PIDController pid = {
     .Kp      = 1.0f,
@@ -338,34 +339,6 @@ int main(void)
     PIDController *controller = NULL;
 
     controller = &pid;
-//    PIDController pid;
-//
-//    pid.Kp = pidKp;
-//    pid.Ki = pidKi;
-//    pid.Kd = pidKd;
-//    pid.tau  = pidTau;
-//    pid.limMin = pidLimMin;
-//    pid.limMax = pidLimMax;
-//    pid.T = sampleTimeS;
-//    pid.integrator = 0.0;
-//    pid.prevError  = 0.0;
-//    pid.differentiator  = 0.0;
-//    pid.prevMeasurement = 0.0;
-//    pid.out = 0.0;
-
-//    PIDController pid = {
-//        .Kp = pidKp,
-//        .Ki = pidKi,
-//        .Kd = pidKd,
-//        .tau  = pidTau,
-//        .limMin = pidLimMin,
-//        .limMax = pidLimMax,
-//        .T = sampleTimeS,
-//        .integrator = 0.0,
-//        .prevError  = 0.0,
-//        .differentiator  = 0.0,
-//        .prevMeasurement = 0.0,
-//        .out = 0.0};
 
 //****************************************************************************
 //
@@ -373,23 +346,23 @@ int main(void)
 //
 //****************************************************************************
 
-//    status = SFO_INCOMPLETE;
-//    DutyFine = 0;
-//    dutycycle = 0.2;    // initial duty cycle
+    status = SFO_INCOMPLETE;
+    DutyFine = 0;
+
 
 ////
 //// Calling SFO() updates the HRMSTEP register with calibrated MEP_ScaleFactor.
 //// HRMSTEP must be populated with a scale factor value prior to enabling
 //// high resolution period control.
 ////
-//    while(status == SFO_INCOMPLETE)
-//    {
-//        status = SFO();
-//        if(status == SFO_ERROR)
-//        {
-//            error();   // SFO function returns 2 if an error occurs & # of MEP
-//        }              // steps/coarse step exceeds maximum of 255.
-//    }
+    while(status == SFO_INCOMPLETE)
+    {
+        status = SFO();
+        if(status == SFO_ERROR)
+        {
+            error();   // SFO function returns 2 if an error occurs & # of MEP
+        }              // steps/coarse step exceeds maximum of 255.
+    }
 //
     Setup_ePWM();
 
@@ -562,7 +535,7 @@ int main(void)
 //        rtdTempB = calculate_temperature(rtdRes, 'J');
 
         /* Compute new control signal */
-//        epwm2_info.dutyCycle = PIDController_Update(&pid, setpoint, rtdTemp);
+//        epwm2_info->dutyCycle = PIDController_Update(&pid, setpoint, rtdTemp);
         epwm2_info.dutyCycle = PIDController_Update(controller, setpoint, rtdTemp);
 
 //        select_pwm(dutycycle);
@@ -608,7 +581,8 @@ int main(void)
 void update_compare(EPWM_INFO *epwm_info)
 {
     float abs_duty_cycle;
-    if(epwm_info->EPwmTimerIntCount == 1000)
+    uint16_t k = 0;
+    if(k == 20)
     {
         epwm_info->EPwmTimerIntCount = 0;
         status = SFO();
@@ -624,11 +598,11 @@ void update_compare(EPWM_INFO *epwm_info)
     if(epwm_info->EPwmTimerIntCount == 5)
     {
         // makes duty cycle positive if control output is negative
-        if(epwm2_info->dutyCycle < 0){
-            abs_duty_cycle = -epwm2_info->dutyCycle;
+        if(epwm_info->dutyCycle < 0){
+            abs_duty_cycle = -epwm_info->dutyCycle;
         }
         else{
-            abs_duty_cycle = epwm2_info->dutyCycle;
+            abs_duty_cycle = epwm_info->dutyCycle;
         }
 
         DutyFine = ceil(32767*abs_duty_cycle);   // converts duty cycle (float) to Q15 number
@@ -660,6 +634,7 @@ void update_compare(EPWM_INFO *epwm_info)
                              CMPBHR_reg_val; // loses lower 8-bits
 
         epwm_info->EPwmTimerIntCount = 0;
+        k += 1;
     }
     else
     {

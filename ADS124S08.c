@@ -125,8 +125,7 @@ void setChipSelect(void){
 void regWrite(uint16_t regnum, uint16_t data)
 {
     uint16_t iDataTx[3];
-    uint16_t iDataRx[3] = { 0xffff, 0xffff, 0xffff };
-    uint16_t i;
+//    uint16_t iDataRx[3] = { 0xffff, 0xffff, 0xffff };
     iDataTx[0] = (0x0000 | (OPCODE_WREG | (regnum & 0x1f)));
     iDataTx[1] = 0x0000;
     iDataTx[2] = data;
@@ -285,7 +284,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     uint16_t initRegisterMap[NUM_REGISTERS] = { 0 };   // adapted from 8 bits to 16
     uint16_t status;                                // adapted from 8 bits to 16
     uint16_t i = 0;
-    uint16_t dummy = 0x00;
 
     // Provide additional delay time for power supply settling
     DELAY_US( DELAY_2p2MS );
@@ -352,7 +350,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
     registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
     registerMap[REG_ADDR_FSCAL2] = regRead(REG_ADDR_FSCAL2);
-    dummy = regRead(REG_ADDR_FSCAL2);
 
     // Check if all registers were written correctly
     for ( i = REG_ADDR_STATUS; i < REG_ADDR_SYS - REG_ADDR_STATUS + 1; i++ ) {

@@ -280,7 +280,7 @@ uint16_t spi_xmit(uint16_t a)
 {
     uint16_t rx;
     SpiaRegs.SPITXBUF = (a << 8);
-    while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // maybe needs to change to interrupt depending on adc returning value or not
+    while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }
     rx = SpiaRegs.SPIRXBUF;
     return rx;
 }
@@ -309,7 +309,7 @@ uint16_t spi_xmit(uint16_t a)
 bool InitADCPeripherals( ADCchar_Set *adcChars)
 {
     bool            status;
-    uint16_t rx_tss;    // troubleshooting variable
+    uint16_t rx_tss;
 //    *spiHdl = SPI_open( ADC_SPI_0, &spiParams );
 //    if (*spiHdl == NULL) {
 //        Display_printf( displayHdl, 0, 0, "Error initializing master SPI\n" );

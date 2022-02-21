@@ -74,7 +74,7 @@ SECTIONS
    ramgs0           : > RAMGS0,    PAGE = 1
    ramgs1           : > RAMGS1,    PAGE = 1
    
-   .cio             : > RAMLS4,    PAGE = 0		// added by me (testing errors)
+   .cio             : > RAMLS4,    PAGE = 0		// added due to warning #10247-D
    /* The following section definitions are required when using the IPC API Drivers */ 
     GROUP : > CPU1TOCPU2RAM, PAGE = 1 
     {

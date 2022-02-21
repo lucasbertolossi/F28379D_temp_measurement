@@ -198,7 +198,8 @@ float calculate_temperature(float RTDres, char interval){
         case 'A':       // Considerando as medições de 15 a 40 °C
 //            RTDtemp = (RTDres - 100.15)/0.3854;
 //            RTDtemp = 0.0021*RTDres*RTDres + 2.1214*RTDres - 233,64;
-            RTDtemp = 2.5945*RTDres - 259.84;
+//            RTDtemp = 2.5945*RTDres - 259.84;
+            RTDtemp = 2.5945*RTDres - 259.84 - 0.276 - 0.015;
             break;
 
         case 'B':       // Considerando as medições de 22 a 28 °C
@@ -220,7 +221,8 @@ float calculate_temperature(float RTDres, char interval){
             break;
 
         case 'E':       // Considerando C ( melhor equação para 24 graus C constante) e tirando um offset medio
-            RTDtemp = ((RTDres - 100.2)/0.3839)  - 0.12;
+//            RTDtemp = ((RTDres - 100.2)/0.3839)  - 0.12;
+            RTDtemp = ((RTDres - 100.2)/0.3839)  - 0.12 - 0.136;
             break;
 
         case 'F':       // Considerando as medições de 15 a 40 °C (polinomial ordem 2)
@@ -244,7 +246,8 @@ float calculate_temperature(float RTDres, char interval){
             break;
 
         case 'J':
-            RTDtemp = 2.6562*RTDres - 266.74;
+//            RTDtemp = 2.6562*RTDres - 266.74;
+            RTDtemp = 2.6562*RTDres - 266.74 - 0.159 -0.018;
             break;
 
         case 'K':

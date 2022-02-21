@@ -41,9 +41,9 @@ void Setup_ePWM(void){
     //
     // Set Compare values
     //
-    EPwm2Regs.CMPA.bit.CMPA = EPWM2_TIMER_TBPRD/10;     // Set duty 10% initially
+    EPwm2Regs.CMPA.bit.CMPA = EPWM2_TIMER_TBPRD/20;     // Set duty 5% initially
 //    EPwm2Regs.CMPA.bit.CMPAHR = (1 << 8);              // initialize HRPWM extension
-    EPwm2Regs.CMPB.bit.CMPB = EPWM2_TIMER_TBPRD/10;     // Set duty 10% initially
+    EPwm2Regs.CMPB.bit.CMPB = EPWM2_TIMER_TBPRD/20;     // Set duty 5% initially
 //    EPwm2Regs.CMPB.all |= (1 << 8);                    // initialize HRPWM extension
 
     //
@@ -53,9 +53,9 @@ void Setup_ePWM(void){
     EPwm2Regs.AQCTLA.bit.CAU = AQ_CLEAR;              // Set PWM2A on event A,
                                                     // up count
 
-    EPwm2Regs.AQCTLB.bit.ZRO = AQ_SET;            // Clear PWM2B on Period
-    EPwm2Regs.AQCTLB.bit.CBU = AQ_CLEAR;              // Set PWM2B on event A,
-                                                    // up count
+//    EPwm2Regs.AQCTLB.bit.ZRO = AQ_SET;            // Clear PWM2B on Period
+//    EPwm2Regs.AQCTLB.bit.CBU = AQ_CLEAR;              // Set PWM2B on event A,
+//                                                    // up count
 
     //
     // Interrupt where we will change the Compare Values
@@ -66,13 +66,13 @@ void Setup_ePWM(void){
 
 
     // Enables PWM pair (EPwm2A/B) and guarantees delay time to prevent short circuit
-    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;      // Enables Dead-band module
-    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;           // Active Hi Complementary (EPwm2B is inverted)
-    EPwm2Regs.DBCTL.bit.IN_MODE = DBA_ALL;
+//    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;      // Enables Dead-band module
+//    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;           // Active Hi Complementary (EPwm2B is inverted)
+//    EPwm2Regs.DBCTL.bit.IN_MODE = DBA_ALL;
 
     // Configure below depending on the transistor's current up and down time
-    EPwm2Regs.DBFED.bit.DBFED = 100;
-    EPwm2Regs.DBRED.bit.DBRED = 100;
+//    EPwm2Regs.DBFED.bit.DBFED = 100;
+//    EPwm2Regs.DBRED.bit.DBRED = 100;
 
 //    EPwm2Regs.HRCNFG.all = 0x0;
 //    EPwm2Regs.HRCNFG.bit.EDGMODE = HR_FEP;  // MEP control on falling edge
@@ -108,12 +108,14 @@ void Setup_ePWM_Gpio(void){
     GpioCtrlRegs.GPAMUX1.bit.GPIO3 = 1;
     GpioCtrlRegs.GPAPUD.bit.GPIO3 = 1;
 
+    // Right PWM
     GpioCtrlRegs.GPAGMUX2.bit.GPIO18 = 0;
     GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 0;
     GpioCtrlRegs.GPAPUD.bit.GPIO18 = 0;
     GpioCtrlRegs.GPADIR.bit.GPIO18 = 1;     // output
     GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;   // Clear output latch (RPWM_EN disabled)
 
+    // Left PWM
     GpioCtrlRegs.GPAGMUX2.bit.GPIO19 = 0;
     GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;
     GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;
@@ -155,3 +157,28 @@ void Setup_Buttons_Gpio(void){
 
     EDIS;
 }
+
+
+// Enables signal R_PWM using an AND gate - GPIO18
+void enable_pwm_right(bool enable){
+    if(enable){
+        GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;   // disables GPIO19 (L_PWM_EN signal in AND gate)
+        DELAY_US(1000);
+        GpioDataRegs.GPASET.bit.GPIO18 = 1;     // enables GPIO18 (R_PWM_EN signal in AND gate)
+    }else{
+        GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;   // disables GPIO18
+    }
+}
+
+
+// Enables signal L_PWM using an AND gate - GPIO19
+void enable_pwm_left(bool enable){
+    if(enable){
+        GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;   // disables GPIO18 (R_PWM_EN signal in AND gate)
+        DELAY_US(1000);
+        GpioDataRegs.GPASET.bit.GPIO19 = 1;     // enables GPIO19 (L_PWM_EN signal in AND gate)
+    }else{
+        GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;   // disables GPIO19
+    }
+}
+

@@ -81,6 +81,8 @@ typedef struct
     uint16_t EPwmMaxCMPB;
     uint16_t EPwmMinCMPB;
     float dutyCycle;
+    float previousDutyCycle;
+    bool flag_update_pwm;
 }EPWM_INFO;
 //    epwm2_info->EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA
 //    epwm2_info->EPwm_CMPB_Direction = EPWM_CMP_DOWN; // and decreasing CMPB
@@ -91,7 +93,9 @@ EPWM_INFO epwm2_info = {
     .EPwmMinCMPA = EPWM2_MIN_CMPA,
     .EPwmMaxCMPB = EPWM2_MAX_CMPB,
     .EPwmMinCMPB = EPWM2_MIN_CMPB,
-    .dutyCycle = 0.305
+    .dutyCycle = 0.10,
+    .previousDutyCycle = 0.00,
+    .flag_update_pwm = false
 };
 
 //EPWM_INFO *epwm2_info = NULL;
@@ -117,14 +121,17 @@ char* sSetpoint = "";
 float rtdTemp = 0;
 float rtdTempB = 0;
 //float plot1[256];              // used for plotting temperature
-float plot2[256];              // used for plotting temperature (testing)
-float plot3[256];              // used for plotting temperature (testing)
+float plot2[32];              // used for plotting temperature (testing)
+float plot3[32];              // used for plotting temperature (testing)
 float *pTemperature = &rtdTemp; // used for plotting temperature
 uint32_t index = 0;
 uint32_t indextest = 0;
 volatile uint16_t xINT1Count;
 bool flag_nDRDY_INTERRUPT = false;
+bool flag_update_SFO = false;
 
+bool flag_pwm_right_on = false;
+bool flag_pwm_left_on = false;
 float setpoint = 25.0f;
 
 typedef struct PIDController {
@@ -152,15 +159,15 @@ typedef struct PIDController {
     /* Setpoint */
 //  float setpoint;
 } PIDController;
-
+// original kd 2000, T = 0,01 maybe use 0,1, ki 1.8, kp 150
 PIDController pid = {
     .Kp      = 1.0f,
-    .Ki      = 0.5f,
-    .Kd      = 0.0,
+    .Ki      = 0.4f,
+    .Kd      = 10.0f,
     .tau     = 0.02,
     .limMin  = -1.0,
     .limMax  = 1.0,
-    .T       = 0.01,
+    .T       = 1,
 
     .integrator = 0.0,
     .prevError = 0.0,
@@ -191,10 +198,10 @@ __interrupt void epwm2_isr(void);
 __interrupt void xint1_isr(void);         // /DRDY
 __interrupt void xint2_isr(void);         // Increase setpoint
 __interrupt void xint3_isr(void);         // Decrease setpoint
-//__interrupt void cpu_timer0_isr(void);
+__interrupt void cpu_timer0_isr(void);
+void update_flag(EPWM_INFO *epwm_info);
 void update_compare(EPWM_INFO *epwm_info);
 void error(void);
-void select_pwm(float dutycycle);
 float PIDController_Update(PIDController *pid, float setpoint, float measurement);
 //****************************************************************************
 //
@@ -253,7 +260,7 @@ int main(void)
     PieVectTable.XINT1_INT = &xint1_isr;
     PieVectTable.XINT2_INT = &xint2_isr;
     PieVectTable.XINT3_INT = &xint3_isr;
-//    PieVectTable.TIMER0_INT = &cpu_timer0_isr;
+    PieVectTable.TIMER0_INT = &cpu_timer0_isr;
 //    PieVectTable.TIMER1_INT = &cpu_timer1_isr;
 //    PieVectTable.TIMER2_INT = &cpu_timer2_isr;
     PieVectTable.EPWM2_INT = &epwm2_isr;
@@ -263,13 +270,13 @@ int main(void)
 // Initialize the Device Peripheral. This function can be found
 // in F2837xD_CpuTimers.c
 //
-//    InitCpuTimers();   // For this example, only initialize the Cpu Timers
+    InitCpuTimers();   // For this example, only initialize the Cpu Timers
 
 //
 // Configure CPU-Timer 0, 1, and 2 to interrupt every second:
 // 200MHz CPU Freq, 1 second Period (in uSeconds)
 //
-//    ConfigCpuTimer(&CpuTimer0, 200, 1000000);
+    ConfigCpuTimer(&CpuTimer0, 200, 100000);     // 100 ms timer
 //    ConfigCpuTimer(&CpuTimer1, 200, 1000000);
 //    ConfigCpuTimer(&CpuTimer2, 200, 1000000);
 
@@ -279,7 +286,7 @@ int main(void)
 // ConfigCpuTimer and InitCpuTimers (in F2837xD_cputimervars.h), the below
 // settings must also be updated.
 //
-//    CpuTimer0Regs.TCR.all = 0x4000;
+    CpuTimer0Regs.TCR.all = 0x4000;
 //    CpuTimer1Regs.TCR.all = 0x4000;
 //    CpuTimer2Regs.TCR.all = 0x4000;
 
@@ -292,7 +299,7 @@ int main(void)
 // Enable interrupts
 //
     IER |= M_INT1;                            // Enable CPU INT1 (timer 0, XINT1, XINT2)
-//    IER |= M_INT13;                         // Enable CPU INT13 (timer 1)
+    IER |= M_INT13;                         // Enable CPU INT13 (timer 1)
 //    IER |= M_INT14;                         // Enable CPU INT14 (timer 2)
     IER |= M_INT3;                            // Enable CPU INT3 (EPWM1-3 INT)
     IER |= M_INT12;                           // Enable CPU INT12 (XINT3)
@@ -306,7 +313,7 @@ int main(void)
     PieCtrlRegs.PIEIER1.bit.INTx4 = 1;      // XINT1
     PieCtrlRegs.PIEIER1.bit.INTx5 = 1;      // XINT2
     PieCtrlRegs.PIEIER12.bit.INTx1 = 1;     // XINT3
-//    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;      // TINT0
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;      // TINT0
     PieCtrlRegs.PIEIER3.bit.INTx2 = 1;      // EPWM2
 
 //
@@ -531,14 +538,13 @@ int main(void)
 //        rtdTemp = RTD_Linearization( rtdSet, rtdRes );
 //        rtdTempB = RTD_Linearization( rtdSet, rtdRes );
 
-        rtdTemp = calculate_temperature(rtdRes, 'E');
-//        rtdTempB = calculate_temperature(rtdRes, 'J');
+        // Convert using calibration
+        rtdTemp = calculate_temperature(rtdRes, 'A');
+        rtdTempB = calculate_temperature(rtdRes, 'J');
 
         /* Compute new control signal */
 //        epwm2_info->dutyCycle = PIDController_Update(&pid, setpoint, rtdTemp);
         epwm2_info.dutyCycle = PIDController_Update(controller, setpoint, rtdTemp);
-
-//        select_pwm(dutycycle);
 
         if ( isnan(rtdTemp) ) {
             DisplayLCD(1, "NaN");
@@ -552,17 +558,17 @@ int main(void)
 //            floatToChar(rtdRes, sRtdRes);
 //            DisplayLCD(2, sRtdRes);
 
-            plot2[indextest] = rtdRes;
-//            plot2[indextest] = rtdTemp;     // graph A
-            plot3[indextest] = rtdTemp;       // graph B
 
-            indextest = (indextest==255) ? 0 : indextest+1;
+            plot2[indextest] = rtdTemp;     // graph A
+            plot3[indextest] = rtdTempB;       // graph B
+//            plot3[indextest] = rtdRes;
 
+            indextest = (indextest==31) ? 0 : indextest+1;
         }
     } else {
         DisplayLCD(1, errorTimeOut);
         DisplayLCD(2, "");
-        while (1);
+//        while (1);
     }
 
     }   // end while loop
@@ -581,10 +587,17 @@ int main(void)
 void update_compare(EPWM_INFO *epwm_info)
 {
     float abs_duty_cycle;
-    uint16_t k = 0;
-    if(k == 20)
+
+//    if(flag_update_SFO)
+//    {
+//        flag_update_SFO = false;
+//    }
+
+    // Every 1s: change the CMPA/CMPB values
+    if(epwm_info->flag_update_pwm)
     {
-        epwm_info->EPwmTimerIntCount = 0;
+        epwm_info->flag_update_pwm = false;
+
         status = SFO();
         if(status == SFO_ERROR)
         {
@@ -592,19 +605,59 @@ void update_compare(EPWM_INFO *epwm_info)
         // MEP steps/coarse step exceeds maximum of 255.
         error();
         }
-    }
 
-    // Every 5'th interrupt, change the CMPA/CMPB values
-    if(epwm_info->EPwmTimerIntCount == 5)
-    {
-        // makes duty cycle positive if control output is negative
+
+        // makes duty cycle positive if control output is negative, checks if control needs to cool or heat system
+        // Assuming pwm_left cools and pwm_right heats
+
+        // Needs to cool the system (pwm_left)
         if(epwm_info->dutyCycle < 0){
             abs_duty_cycle = -epwm_info->dutyCycle;
-        }
-        else{
+
+            if(flag_pwm_right_on){
+                enable_pwm_right(false);    // Clear GPIO18 low
+                flag_pwm_right_on = false;
+                epwm_info->previousDutyCycle = 0;
+                DELAY_US(1000);     // delays for 1ms (dead time, could as low as rise/fall time of h bridge transistor)
+
+                enable_pwm_left(true);
+                flag_pwm_left_on = true;
+            }
+
+            if(!flag_pwm_left_on){
+                enable_pwm_left(true);
+                flag_pwm_left_on = true;
+            }
+
+        }else{
             abs_duty_cycle = epwm_info->dutyCycle;
+
+            // Needs to heat the system (PWM_right)
+            if(flag_pwm_left_on){
+                enable_pwm_left(false);     // Clear GPIO19 low
+                flag_pwm_left_on = false;
+                epwm_info->previousDutyCycle = 0;
+
+                DELAY_US(1000);     // delays for 1ms (dead time, could as low as rise/fall time of h bridge transistor)
+
+                enable_pwm_right(true);
+                flag_pwm_right_on = true;
+            }
+
+            if(!flag_pwm_right_on){
+                enable_pwm_right(true);
+                flag_pwm_right_on = true;
+            }
+
         }
 
+        // increases periodically the current and not so fast in the beginning (could be faster)
+        if(abs_duty_cycle - epwm_info->previousDutyCycle > 0.1){
+            abs_duty_cycle = epwm_info->previousDutyCycle + 0.1;
+            epwm_info->previousDutyCycle = abs_duty_cycle;
+        }
+
+        // Calculates PWM duty cycle for HRPWM module and apply it
         DutyFine = ceil(32767*abs_duty_cycle);   // converts duty cycle (float) to Q15 number
         CMPA_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
         CMPB_reg_val = ((long)DutyFine * (EPwm2Regs.TBPRD + 1)) >> 15;
@@ -633,12 +686,7 @@ void update_compare(EPWM_INFO *epwm_info)
         EPwm2Regs.CMPB.all = ((long)CMPB_reg_val) << 16 |
                              CMPBHR_reg_val; // loses lower 8-bits
 
-        epwm_info->EPwmTimerIntCount = 0;
-        k += 1;
-    }
-    else
-    {
-        epwm_info->EPwmTimerIntCount++;
+
     }
     return;
 }
@@ -650,20 +698,6 @@ void update_compare(EPWM_INFO *epwm_info)
 void error (void)
 {
     ESTOP0;         // Stop here and handle error
-}
-
-
-void select_pwm(float dutycycle){
-
-    if(dutycycle > 0){
-        GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;   // Disable LPWM_EN
-        GpioDataRegs.GPASET.bit.GPIO18 = 1;     // Enable RPWM_EN
-    }
-    else{
-        GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;   // Disable RPWM_EN
-        GpioDataRegs.GPASET.bit.GPIO19 = 1;     // Enable LPWM_EN
-    }
-    return;
 }
 
 
@@ -729,6 +763,7 @@ float PIDController_Update(PIDController *pid, float setpoint, float measurement
     */
     pid->out = proportional + pid->integrator + pid->differentiator;
 
+
     if (pid->out > pid->limMax) {
 
         pid->out = pid->limMax;
@@ -739,13 +774,29 @@ float PIDController_Update(PIDController *pid, float setpoint, float measurement
 
     }
 
+    //testing pid control
+    if(pid->out>0){
+        pid->out = (proportional + pid->integrator + pid->differentiator)/3;
+
+        if (pid->out > pid->limMax) {
+
+            pid->out = pid->limMax;
+
+        } else if (pid->out < pid->limMin) {
+
+            pid->out = pid->limMin;
+
+        }
+
+    }
+
+
     /* Store error and measurement for later use */
     pid->prevError       = error;
     pid->prevMeasurement = measurement;
 
     /* Return controller output */
     return pid->out;
-
 }
 
 
@@ -786,18 +837,26 @@ __interrupt void xint3_isr(void)
 }
 
 
-//
-// cpu_timer0_isr - CPU Timer0 ISR with interrupt counter
-//
-//__interrupt void cpu_timer0_isr(void)
-//{
-//    CpuTimer0.InterruptCount++;
-//
-//   //
-//   // Acknowledge this interrupt to receive more interrupts from group 1
-//   //
-//    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
-//}
+
+// cpu_timer0_isr - CPU Timer0 ISR with interrupt counter - 100 ms timer
+__interrupt void cpu_timer0_isr(void)
+{
+    CpuTimer0.InterruptCount++;
+    // Update SFO (HRPWM)
+//    if(CpuTimer0.InterruptCount==5){
+//        flag_update_SFO = true;
+//    }
+
+    if(CpuTimer0.InterruptCount==10){
+        update_flag(&epwm2_info);
+        CpuTimer0.InterruptCount= 0;
+    }
+
+   //
+   // Acknowledge this interrupt to receive more interrupts from group 1
+   //
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
 
 
 ////
@@ -819,6 +878,11 @@ __interrupt void epwm2_isr(void)
     // Acknowledge this interrupt to receive more interrupts from group 3
     //
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP3;
+}
+
+
+void update_flag(EPWM_INFO *epwm_info){
+    epwm_info->flag_update_pwm = true;
 }
 
 

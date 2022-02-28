@@ -199,7 +199,7 @@ float calculate_temperature(float RTDres, char interval){
 //            RTDtemp = (RTDres - 100.15)/0.3854;
 //            RTDtemp = 0.0021*RTDres*RTDres + 2.1214*RTDres - 233,64;
 //            RTDtemp = 2.5945*RTDres - 259.84;
-            RTDtemp = 2.5945*RTDres - 259.84 - 0.276 - 0.015;
+            RTDtemp = 2.5945*RTDres - 259.84 - 0.276 - 0.019;
             break;
 
         case 'B':       // Considerando as medições de 22 a 28 °C

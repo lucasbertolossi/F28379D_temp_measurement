@@ -121,8 +121,8 @@ char* sSetpoint = "";
 float rtdTemp = 0;
 float rtdTempB = 0;
 //float plot1[256];              // used for plotting temperature
-float plot2[32];              // used for plotting temperature (testing)
-float plot3[32];              // used for plotting temperature (testing)
+float plot2[1024];              // used for plotting temperature (testing)
+//float plot3[1028];              // used for plotting temperature (testing)
 float *pTemperature = &rtdTemp; // used for plotting temperature
 uint32_t index = 0;
 uint32_t indextest = 0;
@@ -161,7 +161,7 @@ typedef struct PIDController {
 } PIDController;
 // original kd 2000, T = 0,01 maybe use 0,1, ki 1.8, kp 150
 PIDController pid = {
-    .Kp      = 1.0f,
+    .Kp      = 1.3f,
     .Ki      = 0.4f,
     .Kd      = 10.0f,
     .tau     = 0.02,
@@ -251,6 +251,8 @@ int main(void)
 // The shell ISR routines are found in F2837xD_DefaultIsr.c.
 // This function is found in F2837xD_PieVect.c.
 //
+
+
     InitPieVectTable();
 
 //
@@ -333,7 +335,7 @@ int main(void)
 //
     Gpio_Setup_LCD();       // Enable GPIO for LCD as output pins on GPIO4 - GPIO11, GPIO14 - GPIO15;
     InitializeLCD();        // Initialize LCD;
-//    DisplayLCD(1, "Initializing");
+    DisplayLCD(1, "Initializing");
 //    DisplayLCD(2, "Program");
 
 
@@ -524,9 +526,11 @@ int main(void)
     while(1)
     {
         // Display setpoint in LCD
-        floatToCharSetpoint(setpoint, sSetpoint);
+//        floatToCharSetpoint(setpoint, sSetpoint);
+//        floatToCharTemperature(setpoint, sSetpoint);
+        floatToCharTemperature(25.000, sSetpoint);
         DisplayLCD(2, sSetpoint);
-
+        DisplayLCD(2, "Program");
     if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
 
         adcChars.adcValue1 = readConvertedData( &statusb, &crc, COMMAND );
@@ -540,7 +544,7 @@ int main(void)
 
         // Convert using calibration
         rtdTemp = calculate_temperature(rtdRes, 'A');
-        rtdTempB = calculate_temperature(rtdRes, 'J');
+//        rtdTempB = calculate_temperature(rtdRes, 'E');
 
         /* Compute new control signal */
 //        epwm2_info->dutyCycle = PIDController_Update(&pid, setpoint, rtdTemp);
@@ -552,7 +556,8 @@ int main(void)
 //            DisplayLCD(2, "");
         }
         else {
-            floatToChar(rtdTemp, sTemperature);
+//            floatToChar(rtdTemp, sTemperature);
+            floatToCharTemperature(rtdTemp, sTemperature);
             DisplayLCD(1, sTemperature);
 
 //            floatToChar(rtdRes, sRtdRes);
@@ -560,10 +565,10 @@ int main(void)
 
 
             plot2[indextest] = rtdTemp;     // graph A
-            plot3[indextest] = rtdTempB;       // graph B
+//            plot3[indextest] = rtdTempB;       // graph B
 //            plot3[indextest] = rtdRes;
 
-            indextest = (indextest==31) ? 0 : indextest+1;
+            indextest = (indextest==1023) ? 0 : indextest+1;
         }
     } else {
         DisplayLCD(1, errorTimeOut);
@@ -752,6 +757,7 @@ float PIDController_Update(PIDController *pid, float setpoint, float measurement
 
     /*
     * Derivative (band-limited differentiator)
+    * 1/(2tau+T) is missing on first term, but i only realized after i tweaked the parameters, so i will leave it like this
     */
 
     pid->differentiator = -(2.0f * pid->Kd * (measurement - pid->prevMeasurement)   /* Note: derivative on measurement, therefore minus sign in front of equation! */

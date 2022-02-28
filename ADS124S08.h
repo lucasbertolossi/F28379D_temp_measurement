@@ -684,7 +684,7 @@ inline uint16_t xferWord(uint16_t tx)
     void clearChipSelect(void);
     void setChipSelect(void);
     void floatToChar(float fNumber, char* sChar);
-    void floatToCharSetpoint(float fNumber, char* sChar);
+    void floatToCharTemperature(float fNumber, char* sChar);
 
 //    ADS124S08 Datasheet code sequence example
 //

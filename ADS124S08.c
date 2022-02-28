@@ -575,7 +575,7 @@ int32_t readConvertedData(uint16_t status[], uint16_t crc[], readMode mode )
 }
 
 
-void floatToCharSetpoint(float fNumber, char* sChar){
+void floatToCharTemperature(float fNumber, char* sChar){
     uint16_t temp = (uint16_t)(fNumber*10);
     sChar[0] = (temp/100) + '0';        // 250 /100 = 2,50
     sChar[1] = ((temp/10)%10) + '0';    // 25,0 / 10 % 5
@@ -587,7 +587,7 @@ void floatToCharSetpoint(float fNumber, char* sChar){
 
 
 void floatToChar(float fNumber, char* sChar){
-    if(fNumber > 90.0){
+    if(fNumber > 80.0){
         // RTD resistance
         uint32_t temp = (uint32_t)(fNumber*10000);
 
@@ -608,20 +608,20 @@ void floatToChar(float fNumber, char* sChar){
         sChar[7]= (temp%10)+'0';                  // 1234567 / 1 = 1234567 %10 = 6
     }
 
-    else{
-        // Temperature
-        uint16_t temp = (uint16_t)(fNumber*1000);
-        sChar[0] = (temp/10000) + '0';       // 12345 /10000 =
-
-        sChar[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
-
-        sChar[2] = '.';
-
-        sChar[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
-
-        sChar[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
-
-        sChar[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
-    }
+//    else{
+//        // Temperature
+//        uint16_t temp = (uint16_t)(fNumber*1000);
+//        sChar[0] = (temp/10000) + '0';       // 12345 /10000 =
+//
+//        sChar[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
+//
+//        sChar[2] = '.';
+//
+//        sChar[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+//
+//        sChar[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+//
+//        sChar[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
+//    }
 
     }

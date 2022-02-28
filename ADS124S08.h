@@ -47,8 +47,10 @@
 /* Start definitions */
 #ifndef ADS124S08_H_
 #define ADS124S08_H_
-#include "F28x_Project.h"
 #include <stdint.h>
+#include <stdbool.h>
+#include "F28x_Project.h"
+
 
 /********************************************************************************//**
 *                               Hardware connections
@@ -95,7 +97,10 @@
 #define RTD_VBIAS               VBIAS_DEFAULT
 #define RTD_FOUR_WIRE_INPUT_MUX ADS_P_AIN2 | ADS_N_AIN4;                                    // MuxP = Ain2, MuxN = Ain4
 #define RTD_FOUR_WIRE_PGA       ADS_PGA_ENABLED | ADS_GAIN_2;                               // PGA enabled, PGA gain = 2X
-#define RTD_FOUR_WIRE_DATARATE  ADS_CONVMODE_CONT | ADS_FILTERTYPE_LL | ADS_DR_20;          // Continuous conversion, low latency filter, 20 SPS rate
+//#define RTD_FOUR_WIRE_DATARATE  ADS_CONVMODE_CONT | ADS_FILTERTYPE_LL | ADS_DR_20;          // Continuous conversion, low latency filter, 20 SPS rate
+//#define RTD_FOUR_WIRE_DATARATE  ADS_GLOBALCHOP | ADS_CONVMODE_CONT | ADS_FILTERTYPE_LL | ADS_DR_20;          // Global chop on, Continuous conversion, low latency filter, 20 SPS rate 1001 0100 0x94h
+//#define RTD_FOUR_WIRE_DATARATE  (ADS_GLOBALCHOP | ADS_CONVMODE_CONT | ADS_DR_20) & 0xEF ;          // Global chop on, Continuous conversion, Sinc3 filter, 20 SPS rate 1000 0100 0x84h
+#define RTD_FOUR_WIRE_DATARATE  (ADS_GLOBALCHOP | ADS_CONVMODE_CONT | ADS_DR_2_5) & 0xEF ;          // Global chop on, Continuous conversion, Sinc3 filter, 2.5 SPS rate 1000 0000 0x80h
 #define RTD_FOUR_WIRE_REF_SEL   ADS_REFN_BYP_ENABLE | ADS_REFSEL_P1 | ADS_REFINT_ON_ALWAYS; // RefN Enabled, RefP1 and RefN1 selected, Int Ref always on
 #define RTD_FOUR_WIRE_IDACMAG   ADS_IDACMAG_1000;                                           // IDAC Mag 1 mA
 #define RTD_FOUR_WIRE_IDACMUX   ADS_IDAC2_OFF | ADS_IDAC1_A5;                               // IDAC Mux = AIN5, IDAC2 off
@@ -126,6 +131,10 @@ typedef struct ADCcharDef {
     int32_t      adcValue1;         // ADC conversion result provided as sign extended 2's complement (first one)
     int32_t      adcValue2;         // ADC conversion result provided as sign extended 2's complement (second one)
 } ADCchar_Set;
+
+
+
+
 /********************************************************************************//**
  *
  * @name Constants for ADS124S08
@@ -158,7 +167,8 @@ extern bool converting;
 #define DELAY_4TCLK     (uint32_t) (1) // 1usec ~= (4.0 /ADS124S08_FCLK)
 #define DELAY_4096TCLK  (uint32_t) (4096.0 * 1000000 / ADS124S08_FCLK )         // After RESET
 #define DELAY_2p2MS     (uint32_t) (0.0022 * 1000000 / ADS124S08_FCLK )         // After power-up
-#define TIMEOUT_COUNTER 10000
+#define TIMEOUT_COUNTER 20000
+#define TIMEOUT_COUNTER_CAL 50000
 
 // Set SPIBRR to 11 so that clock will meet SPI slave's requirements
 // LSPCLKDIV = 4 (default)
@@ -660,19 +670,21 @@ inline uint16_t xferWord(uint16_t tx)
     rx = SpiaRegs.SPIRXBUF;
     return rx;
 }
+
 //    Function prototypes
     uint16_t getRegisterValue( uint16_t address );
     void regWrite(uint16_t regnum, uint16_t data);
     uint16_t regRead(uint16_t regnum);
-    void readRTDtemp(void);
+//    float readRTDtemp(bool *bAlreadyInitialized);
     bool adcStartupRoutine(ADCchar_Set *adcChars);
     void restoreRegisterDefaults(void);
     void startConversions(void);
     void stopConversions(void);
-    int32_t readConvertedData(uint16_t status[], readMode mode );
+    int32_t readConvertedData(uint16_t status[], uint16_t crc[], readMode mode );
     void clearChipSelect(void);
     void setChipSelect(void);
-    void floatToChar(float fTemperature, char* sTemperature);
+    void floatToChar(float fNumber, char* sChar);
+    void floatToCharTemperature(float fNumber, char* sChar);
 
 //    ADS124S08 Datasheet code sequence example
 //

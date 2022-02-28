@@ -189,6 +189,78 @@ float RTD_Linearization( RTD_Set *rtdSet, float RTDres )
 #endif
 }
 
+
+
+float calculate_temperature(float RTDres, char interval){
+    float RTDtemp;
+    // Testing a few equations
+    switch(interval){
+        case 'A':       // Considerando as medições de 15 a 40 °C
+//            RTDtemp = (RTDres - 100.15)/0.3854;
+//            RTDtemp = 0.0021*RTDres*RTDres + 2.1214*RTDres - 233,64;
+//            RTDtemp = 2.5945*RTDres - 259.84;
+            RTDtemp = 2.5945*RTDres - 259.84 - 0.276 - 0.019;
+            break;
+
+        case 'B':       // Considerando as medições de 22 a 28 °C
+//            RTDtemp = (RTDres - 100.18)/0.3845;
+//            RTDtemp = -0.0108*RTDres*RTDres + 4.9796*RTDres - 391,14
+            RTDtemp = 2.6009*RTDres - 260.56;
+            break;
+
+        case 'C':       // Considerando as medições de 24 a 26 °C
+//            RTDtemp = (RTDres - 100.2)/0.3839;
+//            RTDtemp = 0.004*RTDres*RTDres + 1.7258*RTDres - 212.74;
+            RTDtemp = 2.6049*RTDres - 261;
+            break;
+
+        case 'D':       // Considerando as medições de 20 a 30 °C
+//            RTDtemp = (RTDres - 100.15)/0.3855;
+//            RTDtemp = 0.0008*RTDres*RTDres + 2.419*RTDres - 250.19;
+            RTDtemp = 2.5938*RTDres - 259.78;
+            break;
+
+        case 'E':       // Considerando C ( melhor equação para 24 graus C constante) e tirando um offset medio
+//            RTDtemp = ((RTDres - 100.2)/0.3839)  - 0.12;
+            RTDtemp = ((RTDres - 100.2)/0.3839)  - 0.12 - 0.136;
+            break;
+
+        case 'F':       // Considerando as medições de 15 a 40 °C (polinomial ordem 2)
+//            RTDtemp = (RTDres - 100.15)/0.3854;
+            RTDtemp = 0.0021*RTDres*RTDres + 2.1214*RTDres - 233.64;
+            break;
+
+        case 'G':       // Considerando as medições de 22 a 28 °C (polinomial ordem 2)
+//            RTDtemp = (RTDres - 100.18)/0.3845;
+            RTDtemp = -0.0108*RTDres*RTDres + 4.9796*RTDres - 391.14;
+            break;
+
+        case 'H':       // Considerando as medições de 24 a 26 °C (polinomial ordem 2)
+//            RTDtemp = (RTDres - 100.2)/0.3839;
+            RTDtemp = 0.004*RTDres*RTDres + 1.7258*RTDres - 212.74;
+            break;
+
+        case 'I':       // Considerando as medições de 20 a 30 °C (polinomial ordem 2)
+//            RTDtemp = (RTDres - 100.15)/0.3855;
+            RTDtemp = 0.0008*RTDres*RTDres + 2.419*RTDres - 250.19;
+            break;
+
+        case 'J':
+//            RTDtemp = 2.6562*RTDres - 266.74;
+            RTDtemp = 2.6562*RTDres - 266.74 - 0.159 -0.018;
+            break;
+
+        case 'K':
+            RTDtemp = -0.0111*RTDres*RTDres + 5.1437*RTDres - 406.53;
+            break;
+            // J and E
+    }
+
+    return RTDtemp;
+
+    }
+
+
 /** @} // group group_RTD
  *
  */

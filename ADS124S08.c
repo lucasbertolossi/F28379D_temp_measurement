@@ -55,24 +55,19 @@
  * Software to use ADS124S08EVM with F28379D
  *
  */
-
+#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "F28x_Project.h"
 #include <math.h>
 #include "ADS124S08.h"
 #include "adchal_tidrivers_adapted.h"
 #include "F28379D_lcd.h"
-#include <stdio.h>
 
 /* RTD related includes */
-#include "inc/rtd.h"
-#include "inc/rtd_tables.h"
+//#include "inc/rtd.h"
+//#include "inc/rtd_tables.h"
 //#include "device.h"
-typedef enum RTDExampleDef{
-    RTD_2_Wire_Fig15,     // 2-Wire RTD example using ADS124S08 EVM, User's Guide Figure 15
-    RTD_3_Wire_Fig14,     // 3-Wire RTD example using ADS124S08 EVM, User's Guide Figure 14
-    RTD_4_Wire_Fig16,     // 4-Wire RTD example using ADS124S08 EVM, User's Guide Figure 16
-} RTD_Example;
 
 #define td_CSSC 1   // Delay 1 us first SCLK rising edge after CS falling edge, min 20 ns
 
@@ -130,9 +125,7 @@ void setChipSelect(void){
 void regWrite(uint16_t regnum, uint16_t data)
 {
     uint16_t iDataTx[3];
-    uint16_t iDataRx[3] = { 0xffff, 0xffff, 0xffff };
-    uint16_t i;
-    uint16_t junk;
+//    uint16_t iDataRx[3] = { 0xffff, 0xffff, 0xffff };
     iDataTx[0] = (0x0000 | (OPCODE_WREG | (regnum & 0x1f)));
     iDataTx[1] = 0x0000;
     iDataTx[2] = data;
@@ -207,109 +200,74 @@ uint16_t regRead(uint16_t regnum)
 //    return iData ;
 //}
 
-void readRTDtemp(void){
-    RTD_Set     *rtdSet = NULL;
-    RTD_Type    rtdType = Pt;
-    RTD_Example rtdExample = RTD_4_Wire_Fig16;
-    float       rtdRes, rtdTemp;
-    ADCchar_Set adcChars;
-    uint16_t     status;
-    char errorTimeOut[] = "Timeout on conv.";
-    char errorSpiConfig[] = "Error in SPI";
-    char* sTemperature;
-
-
-    switch ( rtdType ) {
-        case Pt:
-            rtdSet = &PT100_RTD;
-            break;
-    }
-
-    switch ( rtdExample ) {
-//        case RTD_3_Wire_Fig14:
-//            adcChars.inputMuxConfReg = RTD_THREE_WIRE_INPUT_MUX;
-//            adcChars.pgaReg          = RTD_THREE_WIRE_PGA;
-//            adcChars.dataRateReg     = RTD_THREE_WIRE_DATARATE;
-//            adcChars.refSelReg       = RTD_THREE_WIRE_REF_SEL;
-//            adcChars.IDACmagReg      = RTD_THREE_WIRE_IDACMAG;
-//            adcChars.IDACmuxReg      = RTD_THREE_WIRE_IDACMUX;
-//            adcChars.Vref            = RTD_THREE_WIRE_EXT_VREF;
-//            rtdSet->Rref             = RTD_THREE_WIRE_REF_RES;
-//            rtdSet->wiring           = Three_Wire_High_Side_Ref_Two_IDAC;
-//            break;
-        case RTD_4_Wire_Fig16:
-            adcChars.inputMuxConfReg = RTD_FOUR_WIRE_INPUT_MUX;
-            adcChars.pgaReg          = RTD_FOUR_WIRE_PGA;
-            adcChars.dataRateReg     = RTD_FOUR_WIRE_DATARATE;
-            adcChars.refSelReg       = RTD_FOUR_WIRE_REF_SEL;
-            adcChars.IDACmagReg      = RTD_FOUR_WIRE_IDACMAG;
-            adcChars.IDACmuxReg      = RTD_FOUR_WIRE_IDACMUX;
-            adcChars.Vref            = RTD_FOUR_WIRE_INT_VREF;
-            rtdSet->Rref             = RTD_FOUR_WIRE_REF_RES;
-            rtdSet->wiring           = Four_Wire_High_Side_Ref;
-            break;
-    }
-    adcChars.VBIASReg = RTD_VBIAS;
-
-    if ( !InitADCPeripherals(&adcChars) ) {
-        DisplayLCD(1, errorSpiConfig);
+//float readRTDtemp(bool *bAlreadyInitialized){
+//
+//    if(*bAlreadyInitialized==false){
+//        static RTD_Set     *rtdSet = NULL;
+//        static RTD_Type    rtdType = Pt;
+//        static RTD_Example rtdExample = RTD_4_Wire_Fig16;
+//        static float       rtdRes, rtdTemp;
+//        static ADCchar_Set adcChars;
+//        static uint16_t     status;
+//        static char errorTimeOut[] = "Timeout on conv.";
+//        static char errorSpiConfig[] = "Error in SPI";
+//
+//        switch ( rtdType ) {
+//            case Pt:
+//                rtdSet = &PT100_RTD;
+//                break;
+//        }
+//
+//        switch ( rtdExample ) {
+//            case RTD_4_Wire_Fig16:
+//                adcChars.inputMuxConfReg = RTD_FOUR_WIRE_INPUT_MUX;
+//                adcChars.pgaReg          = RTD_FOUR_WIRE_PGA;
+//                adcChars.dataRateReg     = RTD_FOUR_WIRE_DATARATE;
+//                adcChars.refSelReg       = RTD_FOUR_WIRE_REF_SEL;
+//                adcChars.IDACmagReg      = RTD_FOUR_WIRE_IDACMAG;
+//                adcChars.IDACmuxReg      = RTD_FOUR_WIRE_IDACMUX;
+//                adcChars.Vref            = RTD_FOUR_WIRE_INT_VREF;
+//                rtdSet->Rref             = RTD_FOUR_WIRE_REF_RES;
+//                rtdSet->wiring           = Four_Wire_High_Side_Ref;
+//                break;
+//        }
+//        adcChars.VBIASReg = RTD_VBIAS;
+//
+//        if ( !InitADCPeripherals(&adcChars) ) {
+//            DisplayLCD(1, errorSpiConfig);
+//            DisplayLCD(2, "");
+//
+//            while (1);
+//        }
+//        *bAlreadyInitialized = true;
+//    }
+//
+//    if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
+//        adcChars.adcValue1 = readConvertedData( &status, COMMAND );
+//
+//        // Convert ADC values RTD resistance
+//        rtdRes = Convert_Code2RTD_Resistance( &adcChars, rtdSet  );
+//
+//        // Convert RTD resistance to temperature and linearize
+//        rtdTemp = RTD_Linearization( rtdSet, rtdRes );
+//
+//        if ( isnan(rtdTemp) ) {
+//            DisplayLCD(1, "Temp: NaN");
+//            DisplayLCD(2, "");
+//        }
+////        } else {
+////            floatToChar(rtdTemp, sTemperature);
+////            DisplayLCD(1, sTemperature);
+////        }
+//    } else {
+//        DisplayLCD(1, errorTimeOut);
 //        DisplayLCD(2, "");
-
-        while (1);
-    }
-
-    do {
-        if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
-            adcChars.adcValue1 = readConvertedData( &status, COMMAND );
-            // For 3-wire with one IDAC, multiple readings are needed. So reconfigure ADC to read 2nd channel
-//            if ( rtdSet->wiring == Three_Wire_High_Side_Ref_One_IDAC || rtdSet->wiring == Three_Wire_Low_Side_Ref_One_IDAC ) {
-//                adcChars2.inputMuxConfReg = RTD_THREE_WIRE_INPUT_MUX2;
-//                adcChars2.pgaReg          = RTD_THREE_WIRE_PGA;
-//                adcChars2.dataRateReg     = RTD_THREE_WIRE_DATARATE;
-//                adcChars2.refSelReg       = RTD_THREE_WIRE_REF_SEL;
-//                adcChars2.IDACmagReg      = RTD_THREE_WIRE_IDACMAG;
-//                adcChars2.IDACmuxReg      = RTD_THREE_WIRE_IDACMUX;
-//                adcChars2.Vref            = RTD_THREE_WIRE_EXT_VREF;
-//                adcChars2.VBIASReg        = VBIAS_DEFAULT;
+//        while (1);
+//    }
 //
 //
-//                if ( !ReconfigureADC( &adcChars2, spiHdl ) ) {
-//                    Display_printf( displayHdl, 0, 0, "Error reconfiguring ADC\n" );
-//                    while (1);
-//                }
-//                // Store second channel value into previous ADC structure as adcValue2
-//                if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
-//                   adcChars.adcValue2 = readConvertedData( spiHdl, &status, COMMAND );
-//                } else {
-//                    Display_printf( displayHdl, 0, 0, "Timeout on conversion\n" );
-//                    while (1);
-//                }
-//            }
-            // Convert ADC values RTD resistance
-            rtdRes = Convert_Code2RTD_Resistance( &adcChars, rtdSet  );
-            // Convert RTD resistance to temperature and linearize
-            rtdTemp = RTD_Linearization( rtdSet, rtdRes );
-//            Display_printf( displayHdl, 0, 0, "ADC conversion result 1: %i\n", adcChars.adcValue1 );
-//            if ( rtdSet->wiring == Three_Wire_High_Side_Ref_One_IDAC || rtdSet->wiring == Three_Wire_Low_Side_Ref_One_IDAC ) {
-//                Display_printf( displayHdl, 0, 0, "ADC conversion result 2: %i\n", adcChars.adcValue2 );
-//            }
-
-            if ( isnan(rtdTemp) ) {
-                DisplayLCD(1, "Temp: NaN");
-                DisplayLCD(2, "");
-            } else {
-                floatToChar(rtdTemp, sTemperature);
-                DisplayLCD(1, sTemperature);
-            }
-        } else {
-            DisplayLCD(1, errorTimeOut);
-            DisplayLCD(2, "");
-            while (1);
-        }
-
-    } while (1);
-
-}
+//    return rtdTemp;
+//}
 
 /************************************************************************************//**
  *
@@ -339,55 +297,6 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     DELAY_US(1000*5);
     setChipSelect();
 
-    // Ensure internal register array is initialized
-    restoreRegisterDefaults();
-//
-//
-//    // Write all registers
-//    uint16_t countt = 10;    // number of registers to read
-//    uint16_t uiWriteInitialRegistersADC[10] = {0x00, 0x00, 0x24, 0x09, 0x14, 0x06, 0x07, 0xF5, 0x00, 0x10 };
-//    uint16_t junkk;
-//    uint16_t uiDataInitialTx[2];
-//
-//    // clear junk
-//    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
-//        junkk = SpiaRegs.SPIRXBUF;
-//    }
-//    junkk = SpiaRegs.SPIRXBUF;
-//
-//    uiDataInitialTx[0] = OPCODE_WREG + (0x00 & 0x1f);
-//    uiDataInitialTx[1] = countt-1;
-//
-//    clearChipSelect();
-//    xferWord(uiDataInitialTx[0]);
-//    xferWord(uiDataInitialTx[1]);
-//    for(i = 0; i < countt; i++)
-//    {
-//        xferWord(uiWriteInitialRegistersADC[i]);
-//    }
-//    setChipSelect();
-//
-//    // Read back all registers
-//    uint16_t count = 10;    // number of registers to read
-//    uint16_t uiInitialRegistersADC[10] = {0};
-//    uint16_t uiDataTx[2];
-//    uint16_t junk;
-//    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0) {
-//        junk = SpiaRegs.SPIRXBUF;
-//    }
-//    junk = SpiaRegs.SPIRXBUF;
-//    uiDataTx[0] = OPCODE_RREG + (0x00 & 0x1f);
-//    uiDataTx[1] = count-1;
-//    clearChipSelect();
-//    xferWord(uiDataTx[0]);
-//    xferWord(uiDataTx[1]);
-//    for(i = 0; i < count; i++)
-//    {
-//        uiInitialRegistersADC[i] = xferWord(0);
-//    }
-//    setChipSelect();
-//
-// TEST
     status = regRead(REG_ADDR_STATUS);
     if ( (status & ADS_nRDY_MASK) ) {
         return( false );                      // Device not ready
@@ -405,7 +314,8 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     initRegisterMap[REG_ADDR_IDACMAG] = adcChars->IDACmagReg;
     initRegisterMap[REG_ADDR_IDACMUX] = adcChars->IDACmuxReg;
     initRegisterMap[REG_ADDR_VBIAS]   = adcChars->VBIASReg;
-    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT;
+//    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT;
+    initRegisterMap[REG_ADDR_SYS]     = SYS_DEFAULT | ADS_CALSAMPLE_16; // sample 16 times for calibration (calibration works when global chopping is off)
 
     // Initialize ADC Characteristics
     adcChars->resolution     = ADS124S08_BITRES;
@@ -426,6 +336,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     regWrite(REG_ADDR_IDACMUX, adcChars->IDACmuxReg);
     regWrite(REG_ADDR_VBIAS, adcChars->VBIASReg);
     regWrite(REG_ADDR_SYS, SYS_DEFAULT);
+//    regWrite(REG_ADDR_SYS, SYS_DEFAULT | ADS_CALSAMPLE_16);
 
     // Read back all registers
 //    readMultipleRegisters( spiHdl, REG_ADDR_ID, NUM_REGISTERS );
@@ -438,6 +349,7 @@ bool adcStartupRoutine(ADCchar_Set *adcChars)
     registerMap[REG_ADDR_IDACMUX] = regRead(REG_ADDR_IDACMUX);
     registerMap[REG_ADDR_VBIAS] = regRead(REG_ADDR_VBIAS);
     registerMap[REG_ADDR_SYS] = regRead(REG_ADDR_SYS);
+    registerMap[REG_ADDR_FSCAL2] = regRead(REG_ADDR_FSCAL2);
 
     // Check if all registers were written correctly
     for ( i = REG_ADDR_STATUS; i < REG_ADDR_SYS - REG_ADDR_STATUS + 1; i++ ) {
@@ -507,7 +419,7 @@ void startConversions(void)
      /* Begin continuous conversions */
     setSTART( HIGH );
 #else
-    sendSTART( spiHdl );
+    sendSTART();
 #endif
 }
 
@@ -590,7 +502,7 @@ void stopConversions()
  *
  * @return      32-bit sign-extended conversion result (data only)
  */
-int32_t readConvertedData(uint16_t status[], readMode mode )
+int32_t readConvertedData(uint16_t status[], uint16_t crc[], readMode mode )
 {
     uint16_t DataTx[RDATA_COMMAND_LENGTH + STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH] = { 0 };    // Initialize all array elements to 0
     uint16_t DataRx[RDATA_COMMAND_LENGTH + STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH] = { 0 };
@@ -598,6 +510,7 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
     uint16_t dataPosition;
     uint16_t byte_options;
     bool    status_byte_enabled = 0;
+    bool    crc_byte_enabled = 0;
     int32_t signByte, upperByte, middleByte, lowerByte;
     uint16_t i;
     // Status Byte is sent if SENDSTAT bit of SYS register is set
@@ -610,6 +523,7 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
         case 1:                         // No STATUS and CRC
             byteLength   = DATA_LENGTH + CRC_LENGTH;
             dataPosition = 0;
+            crc_byte_enabled = 1;
             break;
         case 2:                         // STATUS and no CRC
             byteLength   = STATUS_LENGTH + DATA_LENGTH;
@@ -620,6 +534,7 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
             byteLength   = STATUS_LENGTH + DATA_LENGTH + CRC_LENGTH;
             dataPosition = 1;
             status_byte_enabled = 1;
+            crc_byte_enabled = 1;
             break;
     }
 
@@ -640,6 +555,11 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
         status[0] = DataRx[dataPosition - 1];
     }
 
+    /* Check if CRC byte is enabled and if we have a valid "crc" memory pointer */
+    if ( crc_byte_enabled && crc) {
+        crc[0] = DataRx[dataPosition + 3];
+    }
+
     /* Return the 32-bit sign-extended conversion result */
     if ( DataRx[dataPosition] & 0x80u ) {
         signByte = 0xFF000000;
@@ -655,17 +575,53 @@ int32_t readConvertedData(uint16_t status[], readMode mode )
 }
 
 
-void floatToChar(float fTemperature, char* sTemperature){
-    int temp = (int)(fTemperature*1000);
-    sTemperature[0] = (temp/10000) + '0';       // 12345 /10000 =
+void floatToCharTemperature(float fNumber, char* sChar){
+    uint16_t temp = (uint16_t)(fNumber*10);
+    sChar[0] = (temp/100) + '0';        // 250 /100 = 2,50
+    sChar[1] = ((temp/10)%10) + '0';    // 25,0 / 10 % 5
+    sChar[2] = '.';
+    sChar[3] = (temp%10) + '0';         // 250 / 10 %
+    sChar[4] = '0';
+    sChar[5] = '0';
+}
 
-    sTemperature[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
 
-    sTemperature[2] = '.';
-    sTemperature[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+void floatToChar(float fNumber, char* sChar){
+    if(fNumber > 80.0){
+        // RTD resistance
+        uint32_t temp = (uint32_t)(fNumber*10000);
 
-    sTemperature[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+        sChar[0] = (temp/1000000) + '0';      // 1234567 / 100000 = 1,234567
 
-    sTemperature[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
+        sChar[1] = ((temp/100000) %10) + '0';       // 1234567 /10000 = 12,34567
+
+        sChar[2] = ((temp/10000) %10) + '0';       // 1234567 /1000 = 123.4567 %10 = 3
+
+        sChar[3] = '.';
+
+        sChar[4] = ((temp/1000) %10)+ '0';         // 1234567 /100 = 1234.567 %10 = 4
+
+        sChar[5]=((temp/100) %10)+ '0';            // 1234567 / 10 = 12345.67 %10 = 5
+
+        sChar[6]=((temp/10) %10)+ '0';             // 1234567 / 10 = 123456.7 %10 = 5
+
+        sChar[7]= (temp%10)+'0';                  // 1234567 / 1 = 1234567 %10 = 6
+    }
+
+//    else{
+//        // Temperature
+//        uint16_t temp = (uint16_t)(fNumber*1000);
+//        sChar[0] = (temp/10000) + '0';       // 12345 /10000 =
+//
+//        sChar[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
+//
+//        sChar[2] = '.';
+//
+//        sChar[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+//
+//        sChar[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+//
+//        sChar[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
+//    }
 
     }

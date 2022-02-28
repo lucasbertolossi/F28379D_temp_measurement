@@ -31,6 +31,7 @@
 #include "F28x_Project.h"
 #include "ADS124S08.h"
 #include "adchal_tidrivers_adapted.h"
+#include "F28379D_lcd.h"
 
 //****************************************************************************
 //
@@ -39,7 +40,7 @@
 //****************************************************************************
 
 // Flag to indicate if an interrupt occurred
-//bool flag_nDRDY_INTERRUPT;
+// bool flag_nDRDY_INTERRUPT;
 
 /************************************************************************************//**
  *
@@ -236,7 +237,7 @@ void SetupGpioADC(void){
     // Configure XINT1
     //
     XintRegs.XINT1CR.bit.POLARITY = 0;          // Falling edge interrupt
-    XintRegs.XINT2CR.bit.POLARITY = 1;          // Rising edge interrupt
+//    XintRegs.XINT2CR.bit.POLARITY = 1;          // Rising edge interrupt
 
     //
     // Enable XINT1
@@ -279,7 +280,7 @@ uint16_t spi_xmit(uint16_t a)
 {
     uint16_t rx;
     SpiaRegs.SPITXBUF = (a << 8);
-    while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }   // maybe needs to change to interrupt depending on adc returning value or not
+    while(SpiaRegs.SPIFFRX.bit.RXFFST !=1) { }
     rx = SpiaRegs.SPIRXBUF;
     return rx;
 }
@@ -308,7 +309,7 @@ uint16_t spi_xmit(uint16_t a)
 bool InitADCPeripherals( ADCchar_Set *adcChars)
 {
     bool            status;
-
+    uint16_t rx_tss;
 //    *spiHdl = SPI_open( ADC_SPI_0, &spiParams );
 //    if (*spiHdl == NULL) {
 //        Display_printf( displayHdl, 0, 0, "Error initializing master SPI\n" );
@@ -325,14 +326,38 @@ bool InitADCPeripherals( ADCchar_Set *adcChars)
     SetupGpioADC();         // Configures GPIO for pins START and /RESET
                             // Configure external interruption for DRDY
 
-    // Start up the ADC
+    // Start up the ADC     // QUEBRAR AQUI
     status = adcStartupRoutine(adcChars);
 
     /* DRDY interrupt configuration */
 //    GPIO_clearInt( ADC_DRDY );
 //    GPIO_enableInt( ADC_DRDY );                 // enable Interrupt
 
+    clearChipSelect();
+
     startConversions();                           // Start Conversions
+
+    DELAY_US(115*1000);     // first data conversion period for global chop mode at 20 SPS table 18
+    // Self offset calibration (needs to be in conversion mode) - disabled due to use of global chopping
+    // Samples to be averaged are chosen using the
+    // CAL_SAMP[1:0] bits in System control register (09h)
+    rx_tss = spi_xmit(OPCODE_SFOCAL);
+//
+    if ( waitForDRDYHtoL( TIMEOUT_COUNTER_CAL ) ) {
+
+    } else {
+        DisplayLCD(1, "Timeout on calib");
+        DisplayLCD(2, "");
+        while (1);
+    }
+
+    setSTART(LOW);
+    DELAY_US(24 * 1000000 / ADS124S08_FCLK);
+
+    setSTART(HIGH);
+    DELAY_US(28 * 1000000 / ADS124S08_FCLK);
+
+
 
     return( status );
 }
@@ -395,6 +420,24 @@ void setSTART( bool state )
     }
     // Minimum START width: 4 tCLKs
     DELAY_US( DELAY_4TCLK );
+}
+
+
+/************************************************************************************//**
+ *
+ * @brief sendSTART()
+ *            Sends START Command through SPI
+ *
+ * @param[in]   spiHdl    SPI_Handle pointer for TI Drivers
+ *
+ * @return      None
+ */
+void sendSTART(void)
+{
+    uint16_t dataTx = OPCODE_START;
+
+    // Send START Command
+    spi_xmit(dataTx);
 }
 
 

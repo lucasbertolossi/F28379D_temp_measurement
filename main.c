@@ -121,8 +121,13 @@ char* sSetpoint = NULL;
 float rtdTemp = 0;
 float rtdTempB = 0;
 //float plot1[256];              // used for plotting temperature
+<<<<<<< HEAD
 //float plot2[1024];              // used for plotting temperature (testing)
 //float plot3[1024];              // used for plotting temperature (testing)
+=======
+float plot2[1024];              // used for plotting temperature (testing)
+//float plot3[1028];              // used for plotting temperature (testing)
+>>>>>>> refs/remotes/origin/main
 float *pTemperature = &rtdTemp; // used for plotting temperature
 uint32_t index = 0;
 uint32_t indextest = 0;
@@ -335,7 +340,7 @@ int main(void)
 //
     Gpio_Setup_LCD();       // Enable GPIO for LCD as output pins on GPIO4 - GPIO11, GPIO14 - GPIO15;
     InitializeLCD();        // Initialize LCD;
-//    DisplayLCD(1, "Initializing");
+    DisplayLCD(1, "Initializing");
 //    DisplayLCD(2, "Program");
 
 
@@ -526,9 +531,15 @@ int main(void)
     while(1)
     {
         // Display setpoint in LCD
+<<<<<<< HEAD
         floatToCharTemperature(setpoint, sSetpoint);
+=======
+//        floatToCharSetpoint(setpoint, sSetpoint);
+//        floatToCharTemperature(setpoint, sSetpoint);
+        floatToCharTemperature(25.000, sSetpoint);
+>>>>>>> refs/remotes/origin/main
         DisplayLCD(2, sSetpoint);
-
+        DisplayLCD(2, "Program");
     if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
 
         adcChars.adcValue1 = readConvertedData( &statusb, &crc, COMMAND );
@@ -562,11 +573,19 @@ int main(void)
 //            DisplayLCD(2, sRtdRes);
 
 
+<<<<<<< HEAD
 //            plot2[indextest] = rtdTemp;     // graph A
+=======
+            plot2[indextest] = rtdTemp;     // graph A
+>>>>>>> refs/remotes/origin/main
 //            plot3[indextest] = rtdTempB;       // graph B
 //            plot3[indextest] = rtdRes;
 
+<<<<<<< HEAD
 //            indextest = (indextest==1023) ? 0 : indextest+1;
+=======
+            indextest = (indextest==1023) ? 0 : indextest+1;
+>>>>>>> refs/remotes/origin/main
         }
     } else {
         DisplayLCD(1, errorTimeOut);

@@ -115,14 +115,14 @@ volatile struct EPWM_REGS *ePWM[] = {0, &EPwm1Regs, &EPwm2Regs};
 
 
 // Global parameter passing to interrupts must occur through global memory
-char* sTemperature = "";
-char* sRtdRes = "";
-char* sSetpoint = "";
+char* sTemperature = NULL;
+char* sRtdRes = NULL;
+char* sSetpoint = NULL;
 float rtdTemp = 0;
 float rtdTempB = 0;
 //float plot1[256];              // used for plotting temperature
-float plot2[1024];              // used for plotting temperature (testing)
-//float plot3[1028];              // used for plotting temperature (testing)
+//float plot2[1024];              // used for plotting temperature (testing)
+//float plot3[1024];              // used for plotting temperature (testing)
 float *pTemperature = &rtdTemp; // used for plotting temperature
 uint32_t index = 0;
 uint32_t indextest = 0;
@@ -159,7 +159,7 @@ typedef struct PIDController {
     /* Setpoint */
 //  float setpoint;
 } PIDController;
-// original kd 2000, T = 0,01 maybe use 0,1, ki 1.8, kp 150
+
 PIDController pid = {
     .Kp      = 1.3f,
     .Ki      = 0.4f,
@@ -335,7 +335,7 @@ int main(void)
 //
     Gpio_Setup_LCD();       // Enable GPIO for LCD as output pins on GPIO4 - GPIO11, GPIO14 - GPIO15;
     InitializeLCD();        // Initialize LCD;
-    DisplayLCD(1, "Initializing");
+//    DisplayLCD(1, "Initializing");
 //    DisplayLCD(2, "Program");
 
 
@@ -526,11 +526,9 @@ int main(void)
     while(1)
     {
         // Display setpoint in LCD
-//        floatToCharSetpoint(setpoint, sSetpoint);
-//        floatToCharTemperature(setpoint, sSetpoint);
-        floatToCharTemperature(25.000, sSetpoint);
+        floatToCharTemperature(setpoint, sSetpoint);
         DisplayLCD(2, sSetpoint);
-        DisplayLCD(2, "Program");
+
     if ( waitForDRDYHtoL( TIMEOUT_COUNTER ) ) {
 
         adcChars.adcValue1 = readConvertedData( &statusb, &crc, COMMAND );
@@ -564,11 +562,11 @@ int main(void)
 //            DisplayLCD(2, sRtdRes);
 
 
-            plot2[indextest] = rtdTemp;     // graph A
+//            plot2[indextest] = rtdTemp;     // graph A
 //            plot3[indextest] = rtdTempB;       // graph B
 //            plot3[indextest] = rtdRes;
 
-            indextest = (indextest==1023) ? 0 : indextest+1;
+//            indextest = (indextest==1023) ? 0 : indextest+1;
         }
     } else {
         DisplayLCD(1, errorTimeOut);

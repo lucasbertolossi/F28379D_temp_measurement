@@ -576,19 +576,35 @@ int32_t readConvertedData(uint16_t status[], uint16_t crc[], readMode mode )
 
 
 void floatToCharTemperature(float fNumber, char* sChar){
-    uint16_t temp = (uint16_t)(fNumber*10);
-    sChar[0] = (temp/100) + '0';        // 250 /100 = 2,50
-    sChar[1] = ((temp/10)%10) + '0';    // 25,0 / 10 % 5
+
+    // Temperature
+    uint16_t temp = (uint16_t)(fNumber*1000);
+    sChar[0] = (temp/10000) + '0';       // 12345 /10000 =
+
+    sChar[1] = ((temp/1000) %10) + '0';       // 12345 /1000 = 12.345 %10 = 2
+
     sChar[2] = '.';
-    sChar[3] = (temp%10) + '0';         // 250 / 10 %
-    sChar[4] = '0';
-    sChar[5] = '0';
+
+    sChar[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+
+    sChar[4]=((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+
+    sChar[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
+
+    //    uint16_t temp = (uint16_t)(fNumber*1000);
+    //    sChar[0] = (temp/100) + '0';        // 250 /100 = 2,50
+    //    sChar[1] = ((temp/10)%10) + '0';    // 25,0 / 10 % 5
+    //    sChar[2] = '.';
+    //    sChar[3] = ((temp/100) %10)+ '0';         // 12345 /100 = 123.45 %10 = 3
+    //    sChar[4]= ((temp/10) %10)+ '0';            // 12345 / 10 = 1234,5 %10 = 4
+    //    sChar[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
 }
 
 
+
 void floatToChar(float fNumber, char* sChar){
-    if(fNumber > 80.0){
-        // RTD resistance
+//    if(fNumber > 80.0){
+        // RTD resistance usually 3digit number ~109 for example, *10^4 to obtain 4 decimal places
         uint32_t temp = (uint32_t)(fNumber*10000);
 
         sChar[0] = (temp/1000000) + '0';      // 1234567 / 100000 = 1,234567
@@ -623,5 +639,3 @@ void floatToChar(float fNumber, char* sChar){
 //
 //        sChar[5]= (temp%10)+'0';                  // 12345 / 1 = 12345 %10 = 5
 //    }
-
-    }
